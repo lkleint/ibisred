@@ -1,0 +1,28 @@
+\BOOKMARK [1][-]{tit.1}{title page}{}% 1
+\BOOKMARK [1][-]{section.1}{1 Introduction}{}% 2
+\BOOKMARK [2][-]{subsection.1.1}{1.1 General}{section.1}% 3
+\BOOKMARK [2][-]{subsection.1.2}{1.2 Requirements}{section.1}% 4
+\BOOKMARK [2][-]{subsection.1.3}{1.3 ToDo and known problems}{section.1}% 5
+\BOOKMARK [1][-]{section.2}{2 The GUI}{}% 6
+\BOOKMARK [2][-]{subsection.2.1}{2.1 Variables}{section.2}% 7
+\BOOKMARK [2][-]{subsection.2.2}{2.2 observing mode choices}{section.2}% 8
+\BOOKMARK [2][-]{subsection.2.3}{2.3 wl database -> now obsolete}{section.2}% 9
+\BOOKMARK [2][-]{subsection.2.4}{2.4 wl dark and flat}{section.2}% 10
+\BOOKMARK [2][-]{subsection.2.5}{2.5 NB and WL align}{section.2}% 11
+\BOOKMARK [2][-]{subsection.2.6}{2.6 nb dark and flat}{section.2}% 12
+\BOOKMARK [2][-]{subsection.2.7}{2.7 calc. blueshift}{section.2}% 13
+\BOOKMARK [2][-]{subsection.2.8}{2.8 nb gain table}{section.2}% 14
+\BOOKMARK [2][-]{subsection.2.9}{2.9 prepare speckle}{section.2}% 15
+\BOOKMARK [2][-]{subsection.2.10}{2.10 Open speckle GUI}{section.2}% 16
+\BOOKMARK [2][-]{subsection.2.11}{2.11 speckle to idl}{section.2}% 17
+\BOOKMARK [2][-]{subsection.2.12}{2.12 destretch speckle}{section.2}% 18
+\BOOKMARK [2][-]{subsection.2.13}{2.13 reduce spec scan}{section.2}% 19
+\BOOKMARK [2][-]{subsection.2.14}{2.14 calc prefilter}{section.2}% 20
+\BOOKMARK [2][-]{subsection.2.15}{2.15 prefilter -> flat}{section.2}% 21
+\BOOKMARK [2][-]{subsection.2.16}{2.16 combine all}{section.2}% 22
+\BOOKMARK [2][-]{subsection.2.17}{2.17 shift NB on WL}{section.2}% 23
+\BOOKMARK [2][-]{subsection.2.18}{2.18 reduce IBIS}{section.2}% 24
+\BOOKMARK [2][-]{subsection.2.19}{2.19 find polcal}{section.2}% 25
+\BOOKMARK [2][-]{subsection.2.20}{2.20 do polcal}{section.2}% 26
+\BOOKMARK [1][-]{section.3}{3 Versions and changes}{}% 27
+\BOOKMARK [1][-]{section.4}{4 Bibliography}{}% 28

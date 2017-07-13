@@ -1,0 +1,10 @@
+--------------------------------------------------------------------------
+openmpirun was unable to launch the specified application as it could not access
+or execute an executable:
+
+Executable: /Users/kleintl/sanhome/ibis/kisip/entry
+Node: wren
+
+while attempting to start process rank 0.
+--------------------------------------------------------------------------
+8 total processes failed to start

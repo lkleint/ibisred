@@ -1,0 +1,1463 @@
+;;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+;; 
+;; Main procedure to calibrate the IBIS observations for darks
+;; gain, blueshift and image distortions (destretch). The procedure
+;; uses the output of ibis_combine.pro as input data.
+;;
+;; oct 11: modified for flagncam
+;;; ### todo: check alignment because params refer to 500x500 images
+;;; single and spectroscopy speckle not done yet
+;;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+PRO ibis_calibrate, o_dir, g_file, d_file, s_file, wl_file, a_file, bshift, $ 
+                    pupil, snumber, $ 
+                    POL = pol, TPFILE = tpfile, DSTR_IDL = dstr_idl, $
+                    SPECKLE = speckle, SINGLE = single, DUAL = dual, $
+                    limb=limb, flagncam=flagncam
+
+;is called once per wl and directory
+
+;;***************************************************************
+;; Parameters
+;;***************************************************************
+
+  ;;
+  ;; Parameters for the destretch grids
+  ;;
+
+  If keyword_set(DSTR_IDL) then begin
+
+     DS_KERNEL = (dstr_idl.kernel)
+     DT_DETR   = (dstr_idl.detrend)
+     METHOD    = (dstr_idl.method)
+     REGION    = (dstr_idl.region)
+     AVG_IMG   = (dstr_idl.avg_img)
+
+  endif
+
+  If keyword_set(SPECKLE) then begin
+
+     speckle_path = (speckle.datapath)
+     speckle_nbdb = (speckle.database)
+
+  endif
+
+
+;;***************************************************************
+;; Read data
+;;***************************************************************
+
+  ;;
+  ;; Restore files.
+  ;; 
+
+  restore, /verb, g_file
+  restore, /verb, d_file
+  restore, /verb, s_file
+  restore, /verb, wl_file
+  restore, /verb, a_file
+
+
+  IF file_test(speckle_nbdb) then restore, /verb, speckle_nbdb
+
+  dim   = size(nb_data)
+  Ncol  = dim[1]
+  Nrow  = dim[2]
+
+  if flagncam eq 1 then $
+     npol = diffelement(info_nb.stokes) else $
+     npol = diffelement(nb_expos.stokes) 
+
+ IF KEYWORD_SET(TPFILE) THEN restore, /verb, tpfile
+
+  Nwave = dim[3]/Npol
+  if flagncam ne 1 then modulation = (nb_expos.stokes)[0:Npol-1] else $
+     modulation = (info_nb.stokes)[0:Npol-1]
+ ;different variable names for old and new cam... 
+
+  print,'---------------------------------------------------'
+  print,'Ok, here the dimensions:                           '       
+  print,'Spatial dimensions: ', Ncol, Nrow                   
+  print,'Wavelength points: ', Nwave
+  print,'Number of modulation states : ', Npol
+  print,'Modulation scheme : ', modulation
+  print,'Does that seem right ?'
+  print,'---------------------------------------------------'
+
+;;***************************************************************
+;; Determine mask indexes
+;;***************************************************************
+
+  mask = fix(pupil)
+  index_in = WHERE(mask EQ 1)
+  index_out = WHERE(mask EQ 0)
+
+
+;;***************************************************************
+;; Get index for ordering wavelengths
+;;***************************************************************
+
+  if flagncam ne 1 then wtmp = REFORM((nb_expos.wavelength_offset)) $
+  else wtmp = reform(info_nb.wave)
+  wtmp = wtmp[uniq(wtmp)]
+  index_wl = sort(wtmp)
+  index_ff = sort(index_wl)
+  wscale = wtmp[index_wl] 
+;data should already be sorted by wl, at least for new cam
+
+
+;;#################################################################
+;;#################################################################
+;; 
+;; POLARIMETRY CASE
+;;
+;;#################################################################
+;;#################################################################
+
+  IF KEYWORD_SET(POL) THEN BEGIN
+
+     IF KEYWORD_SET(DUAL) THEN BEGIN
+
+         print,'---------------------------------------------------'
+         print,'Ok, We are in Polarimetric dual-beam Mode                    '
+         print,'---------------------------------------------------'
+
+        ;;#################################################################
+        ;; Define masks
+        ;;#################################################################
+
+        ;; Get one rectangular mask for both beams
+
+        t1 = get_rect_from_aps_pol(pupil[0:Ncol/2-1, 0:Nrow-1])
+        t2 = get_rect_from_aps_pol(pupil[Ncol/2:Ncol-1, 0:Nrow-1])
+        x1 = MAX([t1[0,0],t2[0,0]]) & dx = MIN([t1[1,0],t2[1,0]]) - x1
+        y1 = MAX([t1[0,1],t2[0,1]]) & dy = MIN([t1[1,1],t2[1,1]]) - y1
+
+        ;;#################################################################
+        ;; Get speckle reconstruction if existent
+        ;;#################################################################
+
+        IF file_test(speckle_nbdb) THEN BEGIN
+
+           ;;
+           ;; Find corresponding speckle reconstruction using
+           ;; data base
+           ;;
+
+           print,'------------------------------------------------------'
+           print,'Identify the speckle reconstruction for the scan      '
+           print,'------------------------------------------------------'
+
+;wrong for new cam
+   if flagncam ne 1 then begin
+           bbf = nb_speckle_db.filename
+           FOR i = 0, (SIZE(bbf))[1] -1 DO bbf[i] = (STRMID(bbf[i], $ 
+                                 (strsplit(bbf[i], '/'))))[n_elements(strsplit(bbf[i], '/'))-1]
+           nbf = (STRMID(s_file, (strsplit(s_file, '/'))))[n_elements(strsplit(s_file, '/'))-1]
+           index = WHERE(bbf EQ nbf)
+           burst = unique_elements(nb_speckle_db.burst[index]) ;how many bursts during one series?
+                ;example 90 img/burst, 246 img per 8542 series => burst has 3-4 elements 
+   endif else begin
+
+           index = where(s_file eq nb_speckle_db.filename)
+           burst = nb_speckle_db.burst[index] ;### one reconstr. per file
+   endelse
+
+ 
+
+           IF (N_ELEMENTS(burst) EQ 1 and burst[0] ne -1) THEN BEGIN 
+
+              print,'------------------------------------------------------'
+              print,' One reconstruction found : ', burst
+              print,'------------------------------------------------------'
+
+              speckle_filename = speckle_path + string(fix(burst), $ 
+                                 FORMAT='("speckle_", I3.3, ".sav")')
+
+              RESTORE, /verb, speckle_filename
+
+ 
+              tmp=simage
+              if (size(simage))[2] eq 1024 then tmp = rebin(tmp,ncol/2,nrow)  ;make 256,512 image but not for 2007
+              
+              if flagncam eq 1 then factor = ncol/500. else factor=1.
+
+              tmp = rotate(tmp,rotindex)
+              tmp = newwl(tmp,f1,f2,r,sfl*factor)
+          
+              simage = ibis_set(tmp,ncol,nrow) ;correct image size back to nx,ny after scaling
+
+
+   
+              ;;
+              ;; Shift speckle reconstruction on average whitelight or
+              ;; to correct for atmospheric refraction. This is
+              ;; corrected for in the whitelight already but not in
+              ;; the reconstruction!
+              ;;
+
+              delta = shc((avg(mwld,2))[Ncol/4-64:Ncol/4+64,Nrow/2-64:Nrow/2+64], $ 
+                          simage[Ncol/4-64:Ncol/4+64,Nrow/2-64:Nrow/2+64], interpolate=1)
+              simage = (shift_bicub(simage,delta[0],delta[1]))[0:Ncol/2-1,0:Nrow-1]
+
+;              simage[index_out] = avg(simage[index_in])
+
+           ENDIF ;--BURST
+
+           IF N_ELEMENTS(burst) GT 1 THEN BEGIN ;### should not happen for new cam
+
+              print,'------------------------------------------------------'
+              print,' More than one reconstruction found : ', burst
+              print,'------------------------------------------------------'
+
+              simages = fltarr(Ncol/2,Nrow, N_ELEMENTS(burst)) ;256,512
+
+              FOR i = 0, N_ELEMENTS(burst)-1 DO BEGIN
+
+                  speckle_filename = speckle_path + string(fix(burst[i]), $ 
+                                     FORMAT='("speckle_", I3.3, ".sav")')
+
+                  RESTORE, /verb, speckle_filename
+
+
+                tmp=simage
+           if (size(simage))[2] eq 1024 then tmp = rebin(tmp,ncol/2,nrow)  ;make 256,512 image but not for 2007
+           if flagncam eq 1 then factor = ncol/500. else factor=1.
+
+                      tmp = rotate(tmp,rotindex)
+                      tmp = newwl(tmp,f1,f2,r,sfl*factor)
+     
+           
+                      tmp = ibis_set(tmp,ncol,nrow) ;correct image size back to nx,ny after scaling
+
+
+                  ;; Shift speckle reconstruction on average whitelight or
+                  ;; to correct for atmospheric refraction. This is
+                  ;; corrected for in the whitelight already but not in
+                  ;; the reconstruction!
+                  ;;
+
+ if not keyword_set(limb) then begin
+                  delta = shc((avg(mwld,2))[Ncol/4-64:Ncol/4+64,Nrow/2-64:Nrow/2+64], $ 
+                                 tmp[Ncol/4-64:Ncol/4+64,Nrow/2-64:Nrow/2+64], /interpolate)
+ endif
+ 
+       ;for limb data; this does not work well. delta is too high 
+
+  
+    if not keyword_set(limb) then tmp = (shift_bicub(tmp,delta[0],delta[1]))[0:Ncol/2-1,0:Nrow-1] $
+     else tmp = tmp[0:Ncol/2-1,0:Nrow-1]
+ ;[0:255,0:511] ok, do not shift for limb data because speckle limb is usually not good
+;
+
+;;                  tmp[index_out] = avg(tmp[index_in])
+
+                  ;;
+                  ;; align references
+                  ;;
+
+                  IF i EQ 0 THEN ref = tmp
+                    
+                  dxy = shc(ref[Ncol/4-64:Ncol/4+64,Nrow/2-64:Nrow/2+64], $ 
+                               tmp[Ncol/4-64:Ncol/4+64,Nrow/2-64:Nrow/2+64], /interpolate)
+                  tmp = shift_bicub(tmp, dxy[0], dxy[1])
+
+                  simages[*,*,i] = tmp
+
+              ENDFOR
+
+              simage = simages & simages = 0
+
+           ENDIF ;--BURST
+
+        ENDIF ;--SPECKLE
+
+        ;;#################################################################
+        ;; Get telescope geometry and lightlevel if existent
+        ;;#################################################################
+;telparams is from a file saved by ibis_wl_db_new.pro (which works
+;with new cam). But it is easier to take telparams from info_nb for
+;new cam
+
+if flagncam ne 1 then begin
+        if n_elements(telparams) gt 0 then begin
+
+           print,'-----------------------------------------------------'
+           print,'Telescope parameter exist and loaded!                '
+           print,'Light level is extracted from telescope information  '
+           print,'-----------------------------------------------------'
+
+           tp_azim  = fltarr(Npol*Nwave)
+           tp_elev  = fltarr(Npol*Nwave)
+           tp_table = fltarr(Npol*Nwave)
+           tp_llevel = fltarr(Npol*Nwave)
+           tp_pee = fltarr(Npol*Nwave)
+           tp_bee = fltarr(Npol*Nwave)
+           tp_see = fltarr(Npol*Nwave)
+           tp_slat = fltarr(Npol*Nwave)
+           tp_slng = fltarr(Npol*Nwave)
+
+           for i=0, Npol*Nwave - 1 do begin
+               tp_azim[i]  = (find_ibis_tel_params(telparams, (nb_expos.time_string)[i], /NB)).azim
+               tp_elev[i]  = (find_ibis_tel_params(telparams, (nb_expos[i]).time_string, /NB)).elev
+               tp_table[i] = (find_ibis_tel_params(telparams, (nb_expos[i]).time_string, /NB)).table
+               tp_llevel[i] = (find_ibis_tel_params(telparams, (nb_expos[i]).time_string, /NB)).llevel
+               tp_pee[i] = (find_ibis_tel_params(telparams, (nb_expos[i]).time_string, /NB)).pee
+               tp_bee[i] = (find_ibis_tel_params(telparams, (nb_expos[i]).time_string, /NB)).bee
+               tp_see[i] = (find_ibis_tel_params(telparams, (nb_expos[i]).time_string, /NB)).see
+               tp_slng[i] = (find_ibis_tel_params(telparams, (nb_expos[i]).time_string, /NB)).slng
+               tp_slat[i] = (find_ibis_tel_params(telparams, (nb_expos[i]).time_string, /NB)).slat
+           endfor
+
+           lightlevel = tp_llevel /  avg(tp_llevel)
+
+        endif else begin
+
+              print,'--------------------------------------------------------------------'
+              print,'Light level for polarimetry is extracted from broad band information'
+              print,'--------------------------------------------------------------------'
+
+              lightlevel = fltarr(Npol*Nwave)
+              for i=0, Npol*Nwave - 1 do begin
+                  lightlevel[i] = avg(mwld[x1:x1+dx-1,y1:y1+dy-1,i])
+              endfor
+
+              lightlevel /= avg(lightlevel)
+
+        endelse ;--TELPARAMS
+ endif else begin ;flagncam
+               tp_azim  = info_nb.dst_az
+               tp_elev  = info_nb.dst_el
+               tp_table = info_nb.dst_tbl
+               tp_llevel = info_nb.dst_llevel
+               tp_pee = info_nb.dst_pee
+               tp_bee =  info_nb.dst_bee
+               tp_see =  info_nb.dst_see
+               tp_slng =  info_nb.dst_slng
+               tp_slat = info_nb.dst_slat
+               lightlevel = tp_llevel /  avg(tp_llevel)
+ endelse
+ 
+
+  
+        ;;#################################################################
+        ;; Flatfield ((and lightlevel)) correction for nb and wl
+        ;;#################################################################
+
+        ;; Apply gain table and lightlevel for each wavelength separately.
+        ;; omit light level correction for now. ll is updated each 10s
+        ;; i.e. to little for a good correction. A jump/update in ll between
+        ;; i+q and i-q would lead to wrong results
+
+        print,'--------------------------------------------------------------------'
+        print,'Gain table correction for narrowband                '
+     ;   print,'Light level for whitelight channel                                  '
+        print,'--------------------------------------------------------------------'
+
+        l = 0
+        mwldn = 0. * mwld
+        nbdwc = fltarr(Ncol, Nrow, dim[3])
+        nbdark = avg(nb_dark[*,*,1:*],2)
+        nb_dark = 0 ;memory...
+
+;what happens if flat is I+Q,I-Q,.. etc. and nb_data only I?
+;npol will be ok, since taken from nb_info,i.e. wcgain[*,*,*,0:npol-1]
+;would be used.
+;this probably doesn't matter for I observations but if npol=2 (I+-V)
+;it could be a problem. therefore:
+;test if flat has same modulation as nb:
+ npolflat = diffelement(info_flat_short.stokes)
+ if npol ne npolflat then begin ;ff more pol states than obs
+  print,'*** WARNING: flat has more polarization states than observations! ***'
+  polflat = info_flat_short.stokes[0:npolflat-1]
+  flatind = fltarr(npol)
+ ;if I is observed and flats are done for I+-S, then special care has to be taken
+  if modulation eq 'I' then begin
+   ;take polarization state where lcvr were set to same voltage
+    tmp=where(info_flat_short.lcvr1 eq info_nb.lcvr1[0] and info_flat_short.lcvr2 eq info_nb.lcvr2[0])
+    modulation = (info_flat_short.stokes[tmp])[0] ;this 'overwrites' I with usually I+Q
+  endif
+  for aa=0,npol-1 do flatind[aa] = where(modulation[aa] eq polflat)
+
+ endif else begin
+ flatind = findgen(npol) ;in the regular case flat modulation have same indices as obs
+ endelse
+
+        FOR n=0, Nwave-1 DO BEGIN  
+            FOR i=0, Npol-1 DO BEGIN
+               mwldn[*,*,l] = mwld[*,*,l] / lightlevel[l]
+               nbdwc[*, *, l] = ((nb_data[*, *, l] - nbdark) * wcgain[*, *, index_ff[n], flatind[i]]) ;/ lightlevel[l]
+               l += 1
+            ENDFOR
+        ENDFOR
+
+        mwld = mwldn  ;changed 20110207 LK
+        mwldn = 0
+        wcgain = 0
+
+        ;;#################################################################
+        ;; Alignment between left and right channel
+        ;;#################################################################
+        ;;#################################################################
+        ;; Determine alignment between left and right beam
+        ;; after gain correction (/= Ali's new version)
+        ;;#################################################################
+;first of all nbdwc is not defined before gain correction. Second of
+;all, without the gain correction one might be crosscorrelating dust
+;on the chip.
+
+        print,'-----------------------------------------'
+        print,'Alignment between left and right channel '
+        print,'-----------------------------------------'
+        s = fltarr(2)
+  
+        FOR i=0,dim[3]-1 DO BEGIN
+            s += shc(nbdwc[0:Ncol/2-1, *, i], nbdwc[Ncol/2:Ncol-1, *, i], /interp)
+        ENDFOR
+        s /= dim[3] ;average shift
+ 
+
+        ;;
+        ;; shift right subaperture on left (also apply to mask and offset)
+        ;;
+
+        ;this part stays in the new version
+        aps_mod = pupil
+        tmp = shift_bicub(float(pupil[Ncol/2:Ncol-1, *]), s[0], s[1])
+        aps_mod[Ncol/2:Ncol-1, *] = FIX(ROUND(tmp))
+
+        bshift_mod = bshift
+        tmp = shift_bicub(bshift[Ncol/2:Ncol-1, *], s[0], s[1])
+        bshift_mod[Ncol/2:Ncol-1, *] = tmp
+        
+        FOR i=0, dim[3]-1 DO BEGIN
+            tmp = shift_bicub(nbdwc[Ncol/2:Ncol-1, *, i], s[0], s[1])
+            nbdwc[Ncol/2:Ncol-1, *, i] = tmp
+        ENDFOR
+
+        ;;#################################################################
+        ;; Resample the arrays
+        ;;#################################################################
+
+        nbsl = nbdwc[0:Ncol/2-1, 0:Nrow-1, *]  ;left nb, corrected
+        nbsr = nbdwc[Ncol/2:Ncol-1, 0:Nrow-1, *] ;right nb corrected
+
+        bsds = rebin(bshift_mod, Ncol, Nrow, Npol*Nwave)
+        blsl = bsds[0:Ncol/2-1, 0:Nrow-1, *] ;left bs map
+        blsr = bsds[Ncol/2:Ncol-1, 0:Nrow-1, *] ;right bs map
+
+        print,'-----------------------------------------'
+        print,'Offset mask size: ', size(bshift)
+        print,'-----------------------------------------'
+
+        s = size(mwld)
+
+        ;;#################################################################
+        ;; Do the destretch with IDL code
+        ;;#################################################################
+
+
+        print,'-----------------------------------------'
+        print,'Destretch starts now .....               '
+        print,'-----------------------------------------'
+
+        IF KEYWORD_SET(DSTR_IDL) THEN BEGIN
+
+           print,'-----------------------------------------'
+           print,'Destretch mode: IDL-code                 '
+           print,'Method : ', method
+           print,'Kernel : ', DS_KERNEL
+           print,'-----------------------------------------'
+
+  
+           print,'running destretch_ibis.pro'
+           If method eq 'AVG' then begin
+             ref = avg(mwld,2)
+             mwld2 = destretch_ibis(ref, mwld, DS_KERNEL, REGION, DT_DETR, shifts=shft_tot, grid=grid)
+           ENDIF
+
+           IF method EQ 'SEQ' THEN BEGIN
+             mwld2 = destretch_ibis(AVG_IMG[0], mwld, DS_KERNEL, REGION, DT_DETR, shifts=shft_tot, grid=grid)
+           ENDIF
+
+           IF method EQ 'SPECKLE' THEN BEGIN
+              ;check everything for new cam
+              ;probably the images have to be resized
+             ;;
+             ;; ref in this case can be one or >1 image!
+             ;;
+
+            if keyword_set(limb) then begin
+            ;get rid of center to limb darkening of mwld
+              nwl = (size(mwld))[3]
+              mwldctl = mwld 
+       ;       restore,'dfm.xdr' ;dark flat and mask (manually saved)
+              tmp = rebin(flat,ncol/2,nrow)  ;make 256,512 image but not for 2007
+              tmp = rotate(tmp,rotindex) & flt2 = newwl(tmp,f1,f2,r,sfl)
+              tmp = rebin(mask,ncol/2,nrow)  ;make 256,512 image but not for 2007
+              tmp = rotate(tmp,rotindex) & msk2 = newwl(tmp,f1,f2,r,sfl)
+
+
+              for i=0,nwl-1 do mwldctl[*,*,i] = $
+                 (limb_subtr(mwldctl[*,*,i],flt2,msk2,spot=[5,256,23,311],/v2,percent=75.))[*,*,0] 
+            endif
+
+             ref = simage
+     ;        restore,'goodwl.xdr',/ve ;as test
+
+             tmp = ibis_mask(mask[0:ncol/2,*],cut=2)
+             tmp = where2d(tmp eq 1)
+             xl = min(tmp[0,*])
+             xr = max(tmp[0,*])
+             yb = min(tmp[1,*])
+             yt = max(tmp[1,*])
+             region[0,*] = region[0,*] - xl
+             region[1,*] = region[1,*] - yb
+
+;according to tom: preserve size of mwld
+IF NOT KEYWORD_SET(limb) THEN BEGIN
+             mwld2 = mwld
+             mwld2[xl:xr,yb:yt,*] = DESTRETCH_IBIS(ref[xl:xr,yb:yt], mwld[xl:xr,yb:yt,*], DS_KERNEL, REGION, DT_DETR, shifts=shft_tot, grid=grid)
+ENDIF ELSE BEGIN
+             mwld2 = mwld
+             mwld2[xl:xr,yb:yt,*] = DESTRETCH_IBIS(ref[xl:xr,yb:yt], mwldctl[xl:xr,yb:yt,*], DS_KERNEL, REGION, DT_DETR, shifts=shft_tot, grid=grid)
+ENDELSE 
+
+; if not keyword_set(limb) then $
+; mwld2 = destretch_ibis(ref[xl:xr,yb:yt], mwld[xl:xr,yb:yt,*], DS_KERNEL, REGION, DT_DETR, shifts=shft_tot, grid=grid) else $
+; mwld2 = destretch_ibis(ref[xl:xr,yb:yt], mwldctl[xl:xr,yb:yt,*], DS_KERNEL, REGION, DT_DETR, shifts=shft_tot, grid=grid)
+
+
+
+
+           ENDIF
+
+
+           ;;#################################################################
+           ;; Destretch narrowband and blueshift
+           ;;#################################################################
+
+           print,'-------------------------------------------------------'
+           print,'Destretch of whitelight done .....                     '
+           print,'Now we destretch the narrowband and the blueshift map  '
+           print,'-------------------------------------------------------'
+
+
+          IF N_ELEMENTS(DS_KERNEL) EQ 1 THEN BEGIN ;new version only
+              
+           print,'Align shift :', shft_tot[*, 0, 0, 0]
+
+           nb = 0. * nbdwc
+ 
+           FOR i = 0,dim[3]-1 DO BEGIN
+               nb[*, *, i] = shift_bicub(nbdwc[*, *, i], shft_tot[0, 0, 0, i], shft_tot[1, 0, 0, i])
+           ENDFOR
+
+           blds = rebin(bshift, Ncol, Nrow, Npol*Nwave)
+           bshift_dstr = 0. * blds
+           FOR i = 0,dim[3]-1 DO BEGIN
+               bshift_dstr[*, *, i] = shift_bicub(blds[*, *, i], shft_tot[0, 0, 0, i], shft_tot[1, 0, 0, i])
+           ENDFOR
+
+        ENDIF ELSE BEGIN
+
+           ;;
+           ;; destretch narrowband left and right
+           ;;
+
+            ;shft_tot is given by the destretch of the wl images and now applied to nb
+            ;only for subframe (not the black edges)
+           FOR i = 0,dim[3]-1 DO BEGIN
+               nbsl[xl:xr, yb:yt, i] = doreg(nbsl[xl:xr, yb:yt, i], grid, shft_tot[*, *, *, i])
+               nbsr[xl:xr, yb:yt, i] = doreg(nbsr[xl:xr, yb:yt, i], grid, shft_tot[*, *, *, i])
+           ENDFOR
+
+           ;;
+           ;; right and left blueshift
+           ;;
+           ;shifts applied to offset maps
+           FOR i=0,dim[3]-1 DO BEGIN
+              blsl[xl:xr, yb:yt, i] = doreg(blsl[xl:xr, yb:yt, i], grid, shft_tot[*, *, *, i])
+              blsr[xl:xr, yb:yt, i] = doreg(blsr[xl:xr, yb:yt, i], grid, shft_tot[*, *, *, i])
+           ENDFOR
+
+         ENDELSE ;ds_kernel
+        ENDIF ;--DSTR_IDL
+
+  
+        ;;#################################################################
+        ;; Perform blueshift correction
+        ;;#################################################################
+
+        print,'-------------------------------------------------------'
+        print,'Now we correct the narrowband for the blueshift        '
+        print,'-------------------------------------------------------'
+
+        nbsl = REFORM(nbsl, Ncol/2, Nrow, Npol, Nwave)
+        nbsr = REFORM(nbsr, Ncol/2, Nrow, Npol, Nwave)
+
+        blsl = REFORM(blsl, Ncol/2, Nrow, Npol, Nwave)
+        blsr = REFORM(blsr, Ncol/2, Nrow, Npol, Nwave)
+
+;       wtmp = REFORM(nb_expos.wavelength_offset)
+;       wtmp = wtmp[uniq(wtmp)]
+;       index_wl = sort(wtmp)
+;       wscale = wtmp[index_wl]
+
+        nbdwc = FLTARR(Ncol/2, Nrow, Npol, Nwave, 2)
+
+        FOR j = 0, Nrow-1 DO BEGIN
+            FOR i = 0, Ncol/2-1 DO BEGIN
+                FOR k = 0, Npol-1 DO BEGIN
+                   nbdwc[i, j, k, *, 0] = REFORM(INTERPOL(REFORM(nbsl[i, j, k, index_wl]), wscale, $
+                                                       wscale + REFORM(blsl[i, j, k, index_wl])))
+                   nbdwc[i, j, k, *, 1] = REFORM(INTERPOL(REFORM(nbsr[i, j, k, index_wl]), wscale, $
+                                                       wscale + REFORM(blsr[i, j, k, index_wl])))
+                ENDFOR
+            ENDFOR
+        ENDFOR
+
+         ;destretched wl is stored in mwld
+        mwld = mwld2 & mwld2 = 0
+
+        ;;#################################################################
+        ;; Mask outer field and fill with average value of inside
+        ;;#################################################################
+
+        mask = (aps_mod gt 0.)[0:Ncol/2-1,0:Nrow-1]
+        index_out_new = WHERE(mask EQ 0)
+        index_in_new = WHERE(mask EQ 1)
+
+        FOR k = 0, Npol-1 DO BEGIN
+            FOR i = 0, Nwave-1 DO BEGIN
+               tmpl = reform(nbdwc[*,*,k,i,0])
+               tmpl[index_out_new] = AVG(tmpl[index_in_new])
+               nbdwc[*,*,k,i,0] = tmpl
+               tmpr = reform(nbdwc[*,*,k,i,1])
+               tmpr[index_out_new] = AVG(tmpr[index_in_new])
+               nbdwc[*,*,k,i,1] = tmpr
+            ENDFOR
+        ENDFOR
+
+        ;;#################################################################
+        ;; Show data
+        ;;#################################################################
+
+        window, 0, xs = 3*Ncol/2, ys = Nrow
+        tvscl, avg(reform(nbdwc[*,*,0,*,0]),2),0,0
+        tvscl, avg(reform(nbdwc[*,*,0,*,1]),2),Ncol/2,0
+        tvscl, avg(mwld,2),2*Ncol/2,0
+
+        IF (Npol EQ 1) THEN nbdwc = REFORM(nbdwc[*,*,0,*,*])
+
+     ENDIF ;--DUAL
+
+     IF KEYWORD_SET(SINGLE) THEN BEGIN
+
+         print,'---------------------------------------------------'
+         print,'Ok, We are in Polarimetric single-beam Mode                    '
+         print,'---------------------------------------------------'
+
+        ;;#################################################################
+        ;; Get speckle reconstruction if existent
+        ;;#################################################################
+
+;### todo for new cam
+        IF KEYWORD_SET(SPECKLE) THEN BEGIN
+stop
+           ;;
+           ;; Find corresponding speckle reconstruction using
+           ;; data base
+           ;;
+
+           print,'------------------------------------------------------'
+           print,'Identify the speckle reconstruction for the scan      '
+           print,'------------------------------------------------------'
+
+           bbf = nb_speckle_db.filename
+           FOR i = 0, (SIZE(bbf))[1] -1 DO bbf[i] = (STRMID(bbf[i], $ 
+                                                    (strsplit(bbf[i], '/'))))[n_elements(strsplit(bbf[i], '/'))-1]
+           nbf = (STRMID(s_file, (strsplit(s_file, '/'))))[n_elements(strsplit(s_file, '/'))-1]
+           index = WHERE(bbf EQ nbf)
+           burst = unique_elements(nb_speckle_db.burst[index])
+           
+           IF (N_ELEMENTS(burst) EQ 1 and burst[0] ne -1) THEN BEGIN 
+
+              print,'------------------------------------------------------'
+              print,' One reconstruction found : ', burst
+              print,'------------------------------------------------------'
+
+              speckle_filename = speckle_path + string(fix(burst), $ 
+                                 FORMAT='("speckle_", I3.3, ".sav")')
+
+              RESTORE, /verb, speckle_filename
+  
+       
+                tmp=simage
+                if (size(simage))[2] eq 1024 then tmp = rebin(tmp,ncol/2,nrow)  ;make 256,512 image but not for 2007
+
+                tmp = rotate(tmp,rotindex)
+                tmp = newwl(tmp,f1,f2,r,sfl)
+   ;simage may not have original dimensions... test? does it matter?
+    ;lk: case of f1 or f2 < 1 (i.e. tmp is not 256x512 but smaller)
+    tmpsz = size(tmp)
+    if tmpsz[1] lt Ncol/2 then begin
+         tmp2 = fltarr(Ncol/2,tmpsz[2])
+         tmp2[0:tmpsz[1]-1,*] = tmp
+         tmp = tmp2
+    endif
+    tmpsz = size(tmp) ;this line is necessary if both f1 and f2 are <1
+    if tmpsz[2] lt Nrow then begin
+         tmp2 = fltarr(tmpsz[1],nrow)
+         tmp2[*,0:tmpsz[2]-1] = tmp
+         tmp = tmp2
+    endif
+    simage=tmp
+
+
+              simage = simage[0:Ncol-1,0:Nrow-1]
+
+              ;;
+              ;; Shift speckle reconstruction on average whitelight or
+              ;; to correct for atmospheric refraction. This is
+              ;; corrected for in the whitelight already but not in
+              ;; the reconstruction!
+              ;;
+
+              delta = shc((avg(mwld,2))[Ncol/2-128:Ncol/2+128,Nrow/2-128:Nrow/2+128], $ 
+                          simage[Ncol/2-128:Ncol/2+128,Nrow/2-128:Nrow/2+128], interpolate=1)
+              simage = (shift_bicub(simage,delta[0],delta[1]))[0:Ncol-1,0:Nrow-1]
+           
+;;              simage[index_out] = avg(simage[index_in])
+
+           ENDIF ;--BURST
+
+           IF N_ELEMENTS(burst) GT 1 THEN BEGIN
+
+              print,'------------------------------------------------------'
+              print,' More than one reconstruction found : ', burst
+              print,'------------------------------------------------------'
+
+              simages = fltarr(Ncol,Nrow, N_ELEMENTS(burst))
+
+              FOR i = 0, N_ELEMENTS(burst)-1 DO BEGIN
+
+                  speckle_filename = speckle_path + string(fix(burst[i]), $ 
+                                     FORMAT='("speckle_", I3.3, ".sav")')
+
+                  RESTORE, /verb, speckle_filename
+
+
+
+             tmp = simage
+             if (size(simage))[2] eq 1024 then tmp = rebin(tmp,ncol/2,nrow)  ;make 256,512 image but not for 2007
+
+             tmp = rotate(tmp,rotindex)
+             tmp = newwl(tmp,f1,f2,r,sfl)
+          
+ 
+    
+   ;lk: case of f1 or f2 < 1 (i.e. tmp is not 256x512 but smaller)
+    tmpsz = size(tmp)
+    if tmpsz[1] lt Ncol/2 then begin
+         tmp2 = fltarr(Ncol/2,tmpsz[2])
+         tmp2[0:tmpsz[1]-1,*] = tmp
+         tmp = tmp2
+    endif
+    tmpsz = size(tmp) ;this line is necessary if both f1 and f2 are <1
+    if tmpsz[2] lt Nrow then begin
+         tmp2 = fltarr(tmpsz[1],nrow)
+         tmp2[*,0:tmpsz[2]-1] = tmp
+         tmp = tmp2
+    endif
+
+  
+                  ;;
+                  ;; Shift speckle reconstruction on average whitelight or
+                  ;; to correct for atmospheric refraction. This is
+                  ;; corrected for in the whitelight already but not in
+                  ;; the reconstruction!
+                  ;;
+ 
+       ;for limb data: this may not work well. delta is too high. See dual beam version.
+
+                  delta = shc(avg(mwld,2), tmp, /interpolate)
+                  tmp = shift_bicub(tmp,delta[0],delta[1])
+           
+;;                  tmp[index_out] = avg(tmp[index_in])
+
+                  ;;
+                  ;; align references
+                  ;;
+
+                  IF i EQ 0 THEN ref = tmp
+                     
+                  dxy = shc(ref[Ncol/2-128:Ncol/2+128,Nrow/2-128:Nrow/2+128], $ 
+                               tmp[Ncol/2-128:Ncol/2+128,Nrow/2-128:Nrow/2+128], /interpolate)
+                  tmp = shift_bicub(tmp, dxy[0], dxy[1])
+
+                  simages[*,*,i] = tmp
+
+              ENDFOR
+
+              simage = simages & simages = 0
+
+           ENDIF ;--BURST
+
+        ENDIF ;--SPECKLE
+
+        ;;#################################################################
+        ;; Get telescope geometry and lightlevel if existent
+        ;;#################################################################
+
+        if n_elements(telparams) gt 0 then begin
+
+           print,'-----------------------------------------------------'
+           print,'Telescope parameter exist and loaded!                '
+           print,'Light level is extracted from telescope information  '
+           print,'-----------------------------------------------------'
+
+           tp_azim  = fltarr(Npol*Nwave)
+           tp_elev  = fltarr(Npol*Nwave)
+           tp_table = fltarr(Npol*Nwave)
+           tp_llevel = fltarr(Npol*Nwave)
+           tp_pee = fltarr(Npol*Nwave)
+           tp_bee = fltarr(Npol*Nwave)
+           tp_see = fltarr(Npol*Nwave)
+           tp_slat = fltarr(Npol*Nwave)
+           tp_slng = fltarr(Npol*Nwave)
+
+           for i=0, Npol*Nwave - 1 do begin
+               tp_azim[i]  = (find_ibis_tel_params(telparams, (nb_expos.time_string)[i], /NB)).azim
+               tp_elev[i]  = (find_ibis_tel_params(telparams, (nb_expos[i]).time_string, /NB)).elev
+               tp_table[i] = (find_ibis_tel_params(telparams, (nb_expos[i]).time_string, /NB)).table
+               tp_llevel[i] = (find_ibis_tel_params(telparams, (nb_expos[i]).time_string, /NB)).llevel
+               tp_pee[i] = (find_ibis_tel_params(telparams, (nb_expos[i]).time_string, /NB)).pee
+               tp_bee[i] = (find_ibis_tel_params(telparams, (nb_expos[i]).time_string, /NB)).bee
+               tp_see[i] = (find_ibis_tel_params(telparams, (nb_expos[i]).time_string, /NB)).see
+               tp_slng[i] = (find_ibis_tel_params(telparams, (nb_expos[i]).time_string, /NB)).slng
+               tp_slat[i] = (find_ibis_tel_params(telparams, (nb_expos[i]).time_string, /NB)).slat
+           endfor
+
+           lightlevel = tp_llevel /  avg(tp_llevel)
+
+        endif else begin
+
+              print,'--------------------------------------------------------------------'
+              print,'Light level for polarimetry is extracted from broad band information'
+              print,'--------------------------------------------------------------------'
+
+              lightlevel = fltarr(Npol*Nwave)
+              for i=0, Npol*Nwave - 1 do lightlevel[i] = avg((mwld[*,*,i])[index_in])
+              lightlevel /= avg(lightlevel)
+
+        endelse ;--TELPARAMS
+
+        ;;#################################################################
+        ;; Flatfield and lightlevel correction for nb and wl
+        ;;#################################################################
+
+        ;; Apply gain table and lightlevel for each wavelength separately.
+ 
+        print,'--------------------------------------------------------------------'
+        print,'Light level and gain table correction for narrowband                '
+        print,'Light level for whitelight channel                                  '
+        print,'--------------------------------------------------------------------'
+
+        l = 0
+        mwldn = 0. * mwld
+        nbdwc = fltarr(Ncol, Nrow, dim[3])
+        nbdark = avg(nb_dark[*,*,1:*],2)
+        nb_dark =0
+
+        FOR n=0, Nwave-1 DO BEGIN  
+            FOR i=0, Npol-1 DO BEGIN
+               mwldn[*,*,l] = mwld[*,*,l] / lightlevel[l]
+               nbdwc[*, *, l] = ((nb_data[*, *, l] - nbdark) * wcgain[*, *, index_ff[n], i]) / lightlevel[l]
+               l += 1
+            ENDFOR
+        ENDFOR
+
+        mwld = mwld
+        mwldn = 0
+        wcgain =0
+
+        s = size(mwld)
+
+        ;;#################################################################
+        ;; Do the destretch with IDL code
+        ;;#################################################################
+
+        print,'-----------------------------------------'
+        print,'Destretch starts now .....               '
+        print,'-----------------------------------------'
+
+        IF KEYWORD_SET(DSTR_IDL) THEN BEGIN
+
+           print,'-----------------------------------------'
+           print,'Destretch mode: IDL-code                 '
+           print,'Method : ', method
+           print,'Kernel : ', DS_KERNEL
+           print,'-----------------------------------------'
+
+           If method eq 'AVG' then begin
+             ref = avg(mwld,2)
+             mwld2 = destretch_ibis(ref, mwld, DS_KERNEL, REGION, DT_DETR, shifts=shft_tot, grid=grid)
+           ENDIF
+
+           IF method EQ 'SEQ' THEN BEGIN
+             mwld2 = destretch_ibis(AVG_IMG[0], mwld, DS_KERNEL, REGION, DT_DETR, shifts=shft_tot, grid=grid)
+           ENDIF
+
+           IF method EQ 'SPECKLE' THEN BEGIN
+
+             ;;
+             ;; ref in this case can be one or >1 image!
+             ;;
+             stop ;add limb version, who would use single beam polarimetry anyway...
+             ref = simage
+             mwld2 = destretch_ibis(ref, mwld, DS_KERNEL, REGION, DT_DETR, shifts=shft_tot, grid=grid)
+
+           ENDIF
+
+           ;;#################################################################
+           ;; Destretch narrowband and blueshift
+           ;;#################################################################
+
+           print,'-------------------------------------------------------'
+           print,'Destretch of whitelight done .....                     '
+           print,'Now we destretch the narrowband and the blueshift map  '
+           print,'-------------------------------------------------------'
+
+           ;;
+           ;; destretch narrowband
+           ;;
+
+           nb = 0. * nbdwc
+           for i=0,dim[3]-1 do begin
+               nb[*, *, i] = doreg(nbdwc[*, *, i], grid, shft_tot[*, *, *, i])
+           endfor
+
+           ;;
+           ;; destretch blueshift
+           ;;
+
+           bshift_mod = bshift
+           blds = rebin(bshift_mod, Ncol, Nrow, Npol*Nwave)
+
+           bl = 0. * blds
+           for i=0,dim[3]-1 do begin
+               bl[*, *, i] = doreg(blds[*, *, i], grid, shft_tot[*, *, *, i])
+           endfor
+
+        ENDIF ;--DSTR_IDL
+
+        ;;#################################################################
+        ;; Perform blueshift correction
+        ;;#################################################################
+
+        print,'-------------------------------------------------------'
+        print,'Now we correct the narrowband for the blueshift        '
+        print,'-------------------------------------------------------'
+
+        nb = REFORM(nb, Ncol, Nrow, Npol, Nwave)
+        bl = REFORM(bl, Ncol, Nrow, Npol, Nwave)
+
+        wtmp = REFORM(nb_expos.wavelength_offset)
+        wtmp = wtmp[uniq(wtmp)]
+        index_wl = sort(wtmp)
+        wscale = wtmp[index_wl]
+
+        nbdwc = FLTARR(Ncol, Nrow, Npol, Nwave)
+
+        FOR j = 0, Nrow-1 DO BEGIN
+            FOR i = 0, Ncol-1 DO BEGIN
+                FOR k = 0, Npol-1 DO BEGIN
+                   nbdwc[i, j, k, *] = REFORM(INTERPOL(REFORM(nb[i, j, k, index_wl]), wscale, $
+                                                       wscale + REFORM(bl[i, j, k, index_wl])))
+                ENDFOR
+            ENDFOR
+        ENDFOR
+
+        mwld = mwld2 & mwld2 = 0
+
+        ;;#################################################################
+        ;; Mask outer field and fill with average value of inside
+        ;;#################################################################
+
+        mask = fix(pupil)
+        index_out_new = WHERE(mask EQ 0)
+        index_in_new = WHERE(mask EQ 1)
+
+        FOR k = 0, Npol-1 DO BEGIN
+            FOR i = 0, Nwave-1 DO BEGIN
+               tmp = reform(nbdwc[*,*,k,i])
+               tmp[index_out_new] = AVG(tmp[index_in_new])
+               nbdwc[*,*,k,i] = tmp
+            ENDFOR
+        ENDFOR
+
+        ;;#################################################################
+        ;; Show data
+        ;;#################################################################
+
+        window, 0, xs = 3*Ncol, ys = Nrow
+        tvscl, avg(reform(nbdwc[*,*,0,*]),2),0,0
+        tvscl, avg(reform(nbdwc[*,*,0,*]),2),Ncol,0
+        tvscl, avg(mwld,2),2*Ncol,0
+
+     ENDIF ;--SINGLE
+
+     ;;#################################################################
+     ;; Save data
+     ;;#################################################################
+
+;### todo
+     file = (STRMID(s_file, (STRSPLIT(s_file, '/'))))[N_ELEMENTS(STRSPLIT(s_file, '/'))-1]
+
+     out_file = o_dir + '/' + file
+
+     PRINT,'-------------------------------------------------------'
+     PRINT, 'Saved : ', out_file
+     PRINT,'-------------------------------------------------------'
+
+if flagncam eq 1 then nb_expos = info_nb
+
+     IF KEYWORD_SET(SPECKLE) THEN BEGIN
+
+        SAVE, FILENAME = out_file, $ 
+              nbdwc, mwld, nb_expos, simage, modulation, shft_tot, bshift_mod, $
+              tp_azim, tp_elev, tp_table, tp_llevel, tp_pee, tp_bee, tp_see, tp_slat, tp_slng, $
+              /comp, /verb
+
+     ENDIF ELSE BEGIN
+
+           SAVE, FILENAME = out_file, $ 
+                 nbdwc, mwld, nb_expos, modulation, shft_tot, bshift_mod, $ 
+                 tp_azim, tp_elev, tp_table, tp_llevel, tp_pee, tp_bee, tp_see, tp_slat, tp_slng, $
+                 /comp, /verb
+   
+     ENDELSE
+
+  ENDIF ELSE BEGIN ;--POL
+
+ ;;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+ ;;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+ ;; 
+ ;; DONE SPECTROPOLARIMETRIC CASE
+ ;;
+ ;;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+ ;;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+        print,'---------------------------------------------------'
+        print,'Ok, We are in Spectroscopic Mode                   '
+        print,'---------------------------------------------------'
+
+        ;;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+        ;; Get lightlevel from telescope if existent or from Whitelight
+        ;;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+        if n_elements(telparams) gt 0 then begin
+
+           print,'-----------------------------------------------------'
+           print,'Telescope parameter exist and loaded!                '
+           print,'Light level is extracted from telescope information  '
+           print,'-----------------------------------------------------'
+
+           tp_azim  = fltarr(Npol*Nwave)
+           tp_elev  = fltarr(Npol*Nwave)
+           tp_table = fltarr(Npol*Nwave)
+           tp_llevel = fltarr(Npol*Nwave)
+           tp_pee = fltarr(Npol*Nwave)
+           tp_bee = fltarr(Npol*Nwave)
+           tp_see = fltarr(Npol*Nwave)
+           tp_slat = fltarr(Npol*Nwave)
+           tp_slng = fltarr(Npol*Nwave)
+
+           for i=0, Npol*Nwave - 1 do begin
+               tp_azim[i]  = (find_ibis_tel_params(telparams, (nb_expos.time_string)[i], /NB)).azim
+               tp_elev[i]  = (find_ibis_tel_params(telparams, (nb_expos[i]).time_string, /NB)).elev
+               tp_table[i] = (find_ibis_tel_params(telparams, (nb_expos[i]).time_string, /NB)).table
+               tp_llevel[i] = (find_ibis_tel_params(telparams, (nb_expos[i]).time_string, /NB)).llevel
+               tp_pee[i] = (find_ibis_tel_params(telparams, (nb_expos[i]).time_string, /NB)).pee
+               tp_bee[i] = (find_ibis_tel_params(telparams, (nb_expos[i]).time_string, /NB)).bee
+               tp_see[i] = (find_ibis_tel_params(telparams, (nb_expos[i]).time_string, /NB)).see
+               tp_slng[i] = (find_ibis_tel_params(telparams, (nb_expos[i]).time_string, /NB)).slng
+               tp_slat[i] = (find_ibis_tel_params(telparams, (nb_expos[i]).time_string, /NB)).slat
+           endfor
+
+           lightlevel = tp_llevel /  avg(tp_llevel)
+
+        endif else begin
+
+              print,'------------------------------------------------------'
+              print,'Light level is extracted from broad band information  '
+              print,'------------------------------------------------------'
+
+              lightlevel = FLTARR(Npol*Nwave)
+              FOR i = 0, Npol*Nwave - 1 DO lightlevel[i] = avg((mwld[*,*,i])[index_in])
+              lightlevel /= avg(lightlevel)
+
+              window,0
+              plot,lightlevel
+              oplot,SMOOTHE(lightlevel,5),lines=1 ;??? smoothe does not seem to exist
+
+              lightlevel = SMOOTHE(lightlevel,5)
+
+        endelse ;--TELPARAMS
+
+        ;;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+        ;; Get speckle reconstruction if existent
+        ;;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+        IF keyword_set(SPECKLE) THEN BEGIN
+
+           ;;
+           ;; Find corresponding speckle reconstruction using
+           ;; data base
+           ;;
+
+           print,'------------------------------------------------------'
+           print,'Identify the speckle reconstruction for the scan      '
+           print,'------------------------------------------------------'
+
+           bbf = nb_speckle_db.filename
+           FOR i = 0, (SIZE(bbf))[1] -1 DO bbf[i] = (STRMID(bbf[i], $ 
+                                                    (strsplit(bbf[i], '/'))))[n_elements(strsplit(bbf[i], '/'))-1]
+           nbf = (STRMID(s_file, (strsplit(s_file, '/'))))[n_elements(strsplit(s_file, '/'))-1]
+           index = WHERE(bbf EQ nbf)
+           burst = unique_elements(nb_speckle_db.burst[index])
+        
+           IF (N_ELEMENTS(burst) EQ 1 and burst[0] ne -1) THEN BEGIN 
+
+              print,'------------------------------------------------------'
+              print,' One reconstruction found : ', burst
+              print,'------------------------------------------------------'
+
+              speckle_filename = speckle_path + string(fix(burst), $ 
+                                 FORMAT='("speckle_", I3.3, ".sav")')
+
+              print,'------------------------------------------------------'
+              print,' Filename of reconstruction found : ', speckle_filename
+              print,'------------------------------------------------------'
+
+              RESTORE, /verb, speckle_filename
+
+;lk modified:
+             tmp = simage
+             if (size(simage))[2] eq 1024 then tmp = rebin(tmp,ncol/2,nrow)  ;make 256,512 image but not for 2007
+
+             tmp = rotate(tmp,rotindex)
+             tmp = newwl(tmp,f1,f2,r,sfl)
+    ;simage may not have original dimensions... test? does it matter?
+    ;lk: case of f1 or f2 < 1 (i.e. tmp is not 256x512 but smaller)
+    tmpsz = size(tmp)
+    if tmpsz[1] lt Ncol/2 then begin
+         tmp2 = fltarr(Ncol/2,tmpsz[2])
+         tmp2[0:tmpsz[1]-1,*] = tmp
+         tmp = tmp2
+    endif
+    tmpsz = size(tmp) ;this line is necessary if both f1 and f2 are <1
+    if tmpsz[2] lt Nrow then begin
+         tmp2 = fltarr(tmpsz[1],nrow)
+         tmp2[*,0:tmpsz[2]-1] = tmp
+         tmp = tmp2
+    endif
+    simage=tmp
+
+   
+
+          ;;
+              ;; Shift speckle reconstruction on average whitelight
+              ;; to correct for atmospheric refraction. This is
+              ;; corrected for in the whitelight already but not in
+              ;; the reconstruction!
+              ;;
+
+              delta = shc((avg(mwld,2))[Ncol/2-128:Ncol/2+128,Nrow/2-128:Nrow/2+128], $ 
+                          simage[Ncol/2-128:Ncol/2+128,Nrow/2-128:Nrow/2+128], interpolate=1)
+              simage = (shift_bicub(simage,delta[0],delta[1]))[0:Ncol-1,0:Nrow-1]
+           
+;;              simage[index_out] = avg(simage[index_in])
+
+              saperture = get_ibis_aperture_new(simage,/plot)
+
+           ENDIF 
+
+           IF N_ELEMENTS(burst) GT 1 THEN BEGIN
+
+              print,'------------------------------------------------------'
+              print,' More than one reconstruction found : ', burst
+              print,'------------------------------------------------------'
+
+              simages = fltarr(Ncol,Nrow, N_ELEMENTS(burst))
+
+              FOR i = 0, N_ELEMENTS(burst)-1 DO BEGIN
+
+                  speckle_filename = speckle_path + string(fix(burst[i]), $ 
+                                        FORMAT='("speckle_", I3.3, ".sav")')
+
+                  RESTORE, /verb, speckle_filename
+
+
+             tmp = simage
+             if (size(simage))[2] eq 1024 then tmp = rebin(tmp,ncol/2,nrow)  ;make 256,512 image but not for 2007
+
+             tmp = rotate(tmp,rotindex)
+             tmp = newwl(tmp,f1,f2,r,sfl)
+    ;simage may not have original dimensions... 
+    ;lk: case of f1 or f2 < 1 (i.e. tmp is not 256x512 but smaller)
+    tmpsz = size(tmp)
+    if tmpsz[1] lt Ncol/2 then begin
+         tmp2 = fltarr(Ncol/2,tmpsz[2])
+         tmp2[0:tmpsz[1]-1,*] = tmp
+         tmp = tmp2
+    endif
+    tmpsz = size(tmp) ;this line is necessary if both f1 and f2 are <1
+    if tmpsz[2] lt Nrow then begin
+         tmp2 = fltarr(tmpsz[1],nrow)
+         tmp2[*,0:tmpsz[2]-1] = tmp
+         tmp = tmp2
+    endif
+  
+                  ;;
+                  ;; Shift speckle reconstruction on average whitelight or
+                  ;; to correct for atmospheric refraction. This is
+                  ;; corrected for in the whitelight already but not in
+                  ;; the reconstruction!
+                  ;;
+
+                  delta = shc((avg(mwld,2))[Ncol/2-128:Ncol/2+128,Nrow/2-128:Nrow/2+128], $ 
+                                 tmp[Ncol/2-128:Ncol/2+128,Nrow/2-128:Nrow/2+128], /interpolate)
+                  tmp = (shift_bicub(tmp,delta[0],delta[1]))[0:Ncol-1,0:Nrow-1]
+           
+;;                  tmp[index_out] = avg(tmp[index_in])
+
+                  ;;
+                  ;; align references
+                  ;;
+
+                  IF i EQ 0 THEN ref = tmp
+                     
+                  dxy = shc(ref[Ncol/2-128:Ncol/2+128,Nrow/2-128:Nrow/2+128], $ 
+                               tmp[Ncol/2-128:Ncol/2+128,Nrow/2-128:Nrow/2+128], /interpolate)
+                  tmp = shift_bicub(tmp, dxy[0], dxy[1])
+
+                  simages[*,*,i] = tmp
+
+              ENDFOR
+
+              saperture = get_ibis_aperture_new(REFORM(simages[*,*,0]),/plot)
+
+              simage = simages & simages = 0
+
+           ENDIF
+
+        ENDIF
+
+        ;;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+        ;; Flatfield and lightlevel correction for nb and wl
+        ;;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+        ;;
+        ;; Apply gain table and lightlevel for each wavelength offset separately.
+        ;;
+ 
+        mwldn = 0.* mwld
+        nbdwc = 0. * nb_data
+
+        nbdark = avg(nb_dark[*,*,1:*],2)
+
+        FOR n=0, Nwave-1 DO BEGIN  
+            wltmp = mwld[*,*,n] / lightlevel[n]
+            wltmp[index_out] = avg(wltmp[index_in])
+            mwldn[*, *, n] = wltmp
+            nbtmp = ( (nb_data[*, *, n] - nbdark) * wcgain[*, *, index_ff[n]] ) / lightlevel[n]
+            nbtmp[index_out] = AVG(nbtmp[index_in]) 
+            nbdwc[*, *, n] = nbtmp
+        ENDFOR
+
+        mwld = mwldn
+        mwldn = 0
+
+        s = size(mwld)
+
+        ;;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+        ;; Do the destretch with IDL-code
+        ;;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+        IF KEYWORD_SET(DSTR_IDL) THEN BEGIN
+
+           print,'-----------------------------------------'
+           print,'Destretch mode: IDL-code                 '
+           print,'Method : ', method
+           print,'Kernel : ', DS_KERNEL
+           print,'-----------------------------------------'
+
+           ;;^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+           ;; Destretch whitelight
+           ;;^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+           IF method EQ 'AVG' THEN BEGIN
+              ref = avg(mwld,2)
+              mwld2 = destretch_ibis(ref, mwld, DS_KERNEL, REGION, DT_DETR, shifts=shft_tot, grid=grid)
+           ENDIF
+
+           IF method EQ 'SEQ' THEN BEGIN
+              mwld2 = destretch_ibis(AVG_IMG[0], mwld, DS_KERNEL, REGION, DT_DETR, shifts=shft_tot, grid=grid)
+           ENDIF
+
+           IF method EQ 'SPECKLE' THEN BEGIN
+
+              ;;
+              ;; ref in this case can be one or >1 image!
+              ;;
+               message,'add limb version in code or type .continue if not limb'
+              ref = simage
+              mwld2 = destretch_ibis(ref, mwld, DS_KERNEL, REGION, DT_DETR, shifts=shft_tot, grid=grid)
+
+           ENDIF
+
+           mwld = mwld2
+
+           ;;#################################################################
+           ;; Destretch narrowband and blueshift array
+           ;;#################################################################
+
+
+           IF N_ELEMENTS(DS_KERNEL) EQ 1 THEN BEGIN
+              
+              print,'Align shift :', shft_tot[*, 0, 0, 0]
+
+              nb = 0. * nbdwc
+              FOR i = 0,dim[3]-1 DO BEGIN
+                  nb[*, *, i] = shift_bicub(nbdwc[*, *, i], shft_tot[0, 0, 0, i], shft_tot[1, 0, 0, i])
+              ENDFOR
+
+              blds = rebin(bshift, Ncol, Nrow, Npol*Nwave)
+              bl = 0. * blds
+              FOR i = 0,dim[3]-1 DO BEGIN
+                  bl[*, *, i] = shift_bicub(blds[*, *, i], shft_tot[0, 0, 0, i], shft_tot[1, 0, 0, i])
+              ENDFOR
+
+           ENDIF ELSE BEGIN
+
+                 ;;
+                 ;; destretch narrowband
+                 ;;
+
+                 nb = 0. * nbdwc
+                 for i=0,s[3]-1 do begin
+                     nb[*, *, i] = doreg(nbdwc[*, *, i], grid, shft_tot[*, *, *, i])
+                 endfor
+
+                 ;;
+                 ;; destretch blueshift
+                 ;;
+
+                 blds = rebin(bshift, Ncol, Nrow, Npol*Nwave)
+
+                 bl = 0. * blds
+                 for i=0,s[3]-1 do begin
+                     bl[*, *, i] = doreg(blds[*, *, i], grid, shft_tot[*, *, *, i])
+                 endfor
+
+           ENDELSE
+
+        ENDIF ;--DSTR_IDL
+
+        ;;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+        ;; Perform blueshift correction
+        ;;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+;        wtmp = REFORM(nb_expos.wavelength_offset)
+;        wtmp = wtmp[uniq(wtmp)]
+;        index_wl = sort(wtmp)
+;        wscale = wtmp[index_wl]
+
+        nbdwc = FLTARR(s[1],s[2],Nwave)
+
+        FOR i = 0, s[1]-1 DO BEGIN
+            FOR j = 0, s[2]-1 DO BEGIN
+
+                nbdwc[i, j, *] = REFORM(INTERPOL(REFORM(nb[i, j, index_wl]), wscale, $
+                                                 wscale + REFORM(bl[i, j, *])))
+            ENDFOR
+        ENDFOR
+
+        ;;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+        ;; Mask outer field and fill with average value of inside
+        ;;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+        maperture = get_ibis_aperture_new(reform(mask),/plot)
+        mask_new = shift(dist(Ncol), Ncol/2, Nrow/2)
+        mask_new = mask_new LT (maperture.radius-5)
+        index_out_new = WHERE(mask_new EQ 0)
+        index_in_new = WHERE(mask_new EQ 1)
+
+        IF N_ELEMENTS(burst) EQ 1 THEN simage[index_out] = AVG(simage[index_in_new])
+                
+        IF N_ELEMENTS(burst) NE 1 THEN begin
+
+           for i=0,N_ELEMENTS(burst)-1 do begin
+               
+               tmp = REFORM(simage[*,*,i])
+               tmp[index_out] = AVG(tmp[index_in_new])
+               simage[*,*,i] = tmp
+
+           endfor
+
+        endif
+
+        FOR i = 0, s[3]-1 DO BEGIN
+            tmp = reform(mwld[*,*,i])
+            tmp[index_out_new] = AVG(tmp[index_in_new])
+            mwld[*,*,i] = tmp
+            tmp = reform(nbdwc[*,*,i])
+            tmp[index_out_new] = AVG(tmp[index_in_new])
+            nbdwc[*,*,i] = tmp
+        ENDFOR
+
+        ;;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+        ;; Save data
+        ;;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+        ;;
+        ;; Save the results.
+        ;;
+
+        file = (STRMID(s_file, (STRSPLIT(s_file, '/'))))[N_ELEMENTS(STRSPLIT(s_file, '/'))-1]
+
+        out_file = o_dir + '/' + file
+
+        PRINT,'----------------------'
+        PRINT, 'Saved : ', out_file
+        PRINT,'----------------------'
+
+        If KEYWORD_SET(SPECKLE) THEN BEGIN
+    
+           SAVE, FILENAME = out_file, $ 
+                 nbdwc, mwld, nb_expos, simage, bshift, shft_tot, /comp
+
+        ENDIF ELSE BEGIN
+
+              SAVE, FILENAME = out_file, $ 
+                    nbdwc, mwld, nb_expos, bshift, shft_tot, /comp
+
+        ENDELSE
+
+       ;;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+       ;;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+       ;;
+       ;; DONE SPECTROSCOPIC CASE
+       ;;
+       ;;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+       ;;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+
+  ENDELSE
+
+;;***************************************************************
+;; Done
+;;***************************************************************
+
+END

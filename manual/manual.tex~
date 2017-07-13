@@ -1,0 +1,325 @@
+\documentclass[a4paper,12pt]{article}
+\usepackage[T1]{fontenc}
+\usepackage[latin1]{inputenc}
+%\usepackage[polutonikogreek]{babel}
+%\usepackage{ngerman} %deutschtrennung
+\usepackage{amssymb} %math-befehle
+\usepackage{fancyhdr} %kopf- und fusszeile
+\usepackage{a4wide}
+\usepackage[top=20mm]{geometry} %seitenraender
+%\usepackage[paper=a4paper,left=25mm,right=25mm,top=20mm,bottom=25mm]{geometry} %seitenraender
+\usepackage{parskip} %kein einzug bei absatz
+%\usepackage[pdftex]{graphicx} %fuer grafiken einfuegen
+\usepackage{color}
+\definecolor{LK}{rgb}{0.05,0.05,0.3} %dunkelblau
+\usepackage[pdftex,bookmarks=true,bookmarksnumbered=true,colorlinks=true,linkcolor=blue,filecolor=red,citecolor=LK,pdfstartview=FitH]{hyperref} %kapiteldarstellung im pdf file
+\renewcommand{\textfraction}{0.15} %lockerere bildpositionierungsregeln
+\renewcommand{\topfraction}{0.85}
+\renewcommand{\bottomfraction}{0.65}
+\renewcommand{\floatpagefraction}{0.60}
+\renewcommand{\figurename}{Fig.} %statt Abbildung steht nur Abb. bei bildern
+\newcommand{\Matrix}[2]{\left(\begin{array}{#1}#2\end{array}\right)}
+\setcounter{topnumber}{3}
+% \addto\captionsngerman{%
+ %   \renewcommand{\figurename}{Fig.}%
+   % \renewcommand{\tablename}{Tab.}%
+  %}
+
+
+
+\begin{document}
+%%%%%%%%%%%%%%%%%% title page %%%%%%%%%%%%%%%%%%%%%
+\pdfbookmark[1]{title page}{tit}
+
+\title{IBIS data reduction}
+
+\author{Lucia Kleint \\
+e-mail: \mbox{kleintl@ucar.edu}
+}
+
+\date{Dec 9, 2011}
+
+\maketitle
+\newpage
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\tableofcontents
+\newpage
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{Introduction}
+\subsection{General}
+The IBIS data reduction can be done (more or less) automatically using ibis\_gui.pro. Start with:
+
+IDL> ibis\_gui
+
+The required libraries (see requirements) must be in your !Path variable. The first two buttons of the GUI need to be pressed each time the GUI (idl session?) is started to initialize all variables. The variables that must be changed for each reduction are hardwired in this program (which creates ibis\_variables.txt
+for an easier access in future reduction steps) and in textbox\_lk.pro.
+
+The other buttons/programs should be run in this order but one may stop
+in the middle and continue on the next day as long as the first 2 buttons
+are always used. Other option: After first initialization use
+ibis\_gui,/restart (to take ffdir and datadir stored in common variables). 
+This should avoid the need for the first 2 buttons.
+
+The wavelength to reduce is defined when clicking on 'variables'. 
+Some parameters (for example kernel size and type of destretch) will
+be the same for all wavelengths during one run of the GUI, i.e. if
+you define lambda=[8542 6302]. If you want different parameters for
+each wavelength, define lambda=[8542] first, run the full reduction,
+define lambda=[6302] and re-run the reduction with the different settings.
+
+The kernel size is written in kerneltxt.txt. The program checks if
+the file exists. If yes, use values in txt file, if not, use [0,64,32,16].
+
+Generally, if there is an overwrite option this means that the first
+run of the subprograms will create all necessary files (even for wl
+that were not specified in the beginning). Re-running and setting the
+overwrite option should not be necessary in general.
+
+run.pro (for calibrations) sets the path to the cal files
+automatically, assuming there is a /cal directory as subdirectory of
+your path where ibis\_gui is located. The cal directory is not included here 
+since >200 MB. Email me if you need it.
+
+If the polcal was taken on a different date, specify its path in first
+textbox (all subdirectories will be searched). Format should be
+similar to 'path to original data', which will be chosen in case
+polpath is not defined in the textbox.
+
+The GUI should work for all IBIS data (even pre 2010 with a different camera). The variable flagncam determines which software is used. With the old camera, each image was in a separate file, only WL images were stored as extensions. Currently, IBIS creates one fits file per scan and all images, filters, polarization states are in extensions.
+
+Many subprograms were taken from A.~Tritschler's version of the data reduction but there are significant differences in programming, user handling and variable names (not in the actual methods), so that the two versions are not compatible.
+
+\subsection{Requirements}
+
+textbox\_lk.pro (which opens a widget in this widget to manually
+         select paths etc.) \\
+          coyote library (fanning) -> move to your idl path\\
+          mpfitellipse (directory called 'fitting') -> move to your idl path\\
+          buttonbox\_lk.pro\\
+          xline, yline, diffelement, xy, anim\_lk (for other routines)\\
+          astrolib (for find\_all\_dir etc.) -> move to your idl path
+                       (available for download: http://idlastro.gsfc.nasa.gov/ftp/) \\
+          where2d (ssw) 2-dimensional where
+
+
+
+\subsection{ToDo and known problems}
+
+\begin{itemize}
+ \item setting 'limb' requires some modifications. The option assumes\\
+      a) the limb is vertical in the image\\
+      b) there is a sunspot located at some fixed coordinates which must be changed manually 
+         (to avoid center-to-limb calculation at that point). change in: \mbox{ibis\_reduce\_speckle.pro:154} and
+            ibis\_calibrate.pro:447
+     limb does not work with the new camera yet!
+
+\item ibis\_combine\_lk: keywords scan\_no=5, Nmax=30, /ATM, /daydrift, /movie not set!!!
+\item spectroscopy and single beam polarimetry not done yet for speckle version of new cam
+\item reduce required memory for ibis\_gui.pro -> 4 GB RAM not enough...
+\item cog blueshift seems to be better than poly\_fit for new cam (which has fringes)
+\item speckle for new cam makes 1 burst per wl per fits file. There
+  should be at least 50 images per filter (=more than ~8 wl steps for polarimetry) for successful speckle. ToDo: Option to combine/split files for speckle
+\item run,pcfile,tfile,fout1,fout2,/Linux : not sure what this will do on a Mac but it seems to work...
+\item ibis\_flat\_avg\_nb could be faster: read s000 only (once per
+  timestamp) and assume that other files (per timestamp) are the same
+\item assign\_speckle2nb does not have an overwrite option. Must delete file manually if redoing speckle.
+\item option R>1, i.e. repetitions of same line in fits file not supported yet
+\item autopolcal: BE CAREFUL! the labels of the buttons are suggestions, taking poldir[0,28,56,84]
+    which usually will not be okay since the instrument fails at least once per calibration sequence
+    and/or the series are restarted by the observers due to clouds etc.. For example, on June 12 the 
+    first poldir series was also useless (which was not easily visible in the logs! the hint was that the
+    log said "Iteration  \#1 of 10" instead of '\#1 of 1') so really make sure you choose the 
+    correct starting directories. Currently, there is no warning if something looks strange.
+\item to look at the reduced data, use view\_ibis,stokesout (will be implemented in gui later)
+\end{itemize}
+
+\section{The GUI}
+\label{sec:gui}
+Each subsection deals with one button of the GUI.
+
+\subsection{variables}
+This is the only input required by the user.\\
+\textbf{date}: specify in yyyymmdd format, for example \textit{20110101} \\
+\textbf{path to original data}: full path to IBIS data (narrowband) . Subdirectories will be searched.\\
+\textbf{path to save data}: full path to save directory (subdirectories created automatically) \\
+ The sub-structure that will be created: calibration (for cal files, flats etc.), scans (for combined WL/NB), wl (whitelight and speckle), result\_xxx (final data)\\
+\textbf{path to original wl data}: full path to IBIS data (whitelight) . Subdirectories will be searched.\\
+\textbf{path to tel.params}: full path to telescope parameters. Pre-2008 the telescope parameters were not in the IBIS headers and a separate camera was run to get them. This line may be left empty for newer data.\\
+\textbf{path to linearity corr. curve}: The pre-2010 camera was non-linear and required a linearity correction. May be left empty for newer cameras.\\
+\textbf{path to polcal}: If the polcal was taken on a different date, specify its path here in a similar format as 'path to original data'. If this line is left empty, the program assumes that the calibration was taken on the observing data and looks for the subdirectories.\\
+\textbf{wavelength(s) to reduce}: for example \textit{6302 8542} or \textit{6302} (no commas)
+
+If you get an error message, try copying ibis\_variables.txt into your current working directory.\\
+Calls \textit{textbox\_lk.pro}
+
+\subsection{create paths}
+Finds and creates paths and subdirectories. Uses \textit{find}, i.e.~won't work on Windows. Restarts GUI afterwards to initialize all measurements found (for example the polcal will go from N/A to actual timestamps).
+
+ Calls \textit{@paths\_vars.pro or @paths\_vars\_ncam.pro}
+  
+\subsection{observing mode choices}
+\textbf{polarimetry / spectroscopy}: Choose polarimetry if LCVR+PBS were in the beam, even if only Stokes $I$ was measured. Spectroscopy assumes that the FOV is not restricted by the small mask. Several polarimetry programs automatically separate left and right beam. For spectroscopy, stop data reduction after reduce IBIS.
+
+\textbf{dual beam / single beam}: If spectroscopy is chosen, single beam is required. For polarimetry, one may use dual or single beam, although the latter one will be an exception (calibration would be worse and seeing polarization not correctable, but bigger FOV).
+
+\subsection{wl database}
+Calls \textit{ibis\_wl\_db\_new.pro}
+
+Constructs a database of sid (seconds into the day) of white-light
+images in the directory wl\_dir. This data base can then be used
+to find the white-light image closest in time to a given narrow-band
+image. A structure for the telescope parameters is also created.
+
+pre-2007: telescope parameters from separate camera (kodak headers)
+For post-2010 data the database is kept only for compatibility reasons, some variables may be required for speckle. Post-2010 data have the same filename for WL and NB, so the time difference is not used anymore to match the data.
+
+\subsection{wl dark and flat}
+Calls \textit{ibis\_wl\_avgdcff.pro}
+
+Program prompts user for bad scans during darks and flats. Dark array saved in /calibration/dark\_date.sav.
+Flat array saved in /calibration/flat\_date.sav.
+
+\subsection{nb and wl align}
+Calls \textit{align\_ibis.pro}.
+
+Alignment of broadband and narrow band images with own program. All grid files are found and the program does not know by itself if they're dots or lines. Dots seem to work better for the alignment, but lines work too. The USAF target images are not used because they only have characters in the middle of the FOV, which doesn't lead to a good alignment. Look in your observing log to choose correct series (close in time to observations, because the alignment varies during the day). All observed wavelengths will be aligned, even if not specified in 'variables'.
+
+Program prompts user to manually rotate/mirror the images (press r) and then save the alignment (press s). This rotation parameter was different for all 3 observing runs I had and is therefore user-dependent. If you have trouble finding the correct orientation, look for dust on the grid.
+
+Then, user must identify 4-5 corresponding points, first in the left, then in the right image. This is used as first guess for auto\_align\_images\_lk.pro.
+
+For post-2010 data, the filter and wavelength info is in the header and used to label files correctly. For older data you may need to manually write the corresponding filter and wl into align\_ibis.pro (variables filterindex and filterlist).
+
+
+requires:\\
+ ibis\_mask.pro\\
+ avg.pro\\
+ diffelement.pro\\
+ setpts\_roi.pro (SSW)\\
+ setpts\_lk.pro (modified ssw, otherwise contour plots wrong in idl 8.0)\\
+ caltrans.pro\\
+ auto\_align\_images\_lk.pro (modified SSW for contour plots)\\
+ pq2rss.pro (SSW)\\
+ anim\_lk.pro (by H. Uitenbroek, modified for modal widgets)
+
+
+restrictions:\\
+in my case, sxpar crashes when using sswidl
+had to add ssw path in .cshrc as last entry in IDL\_PATH and then it worked
+
+The new camera is chosen for observing date 2011 or later. The program
+would need to be adapted for observations from aug 2010-dez 2010
+ (include month in checks).
+
+Make sure you have the newest ssw version. Also, idl 8.0 seems to have a different
+contour routine making the plots look strangely compressed. My modified ssw routines
+solve this problem.
+
+
+PS: If one looks at the sequence of grid images during a scan, the grid is moving from image to image. Can't be due to the AO or the actual glass plate. Possibly temperature variations? Therefore, the program uses the same extension in WL and NB for the crosscorrelation and only one image (no averaging, which would smear the dot pattern).
+
+\subsection{nb dark and flat}
+Calls \textit{ibis\_avgdc.pro} (old cam) or \textit{ibis\_dark\_avg\_nb.pro} (new cam). One dark array per filter is created.
+
+Calls  \textit{ibis\_avgff.pro} (old cam) or \textit{ibis\_flat\_avg\_nb.pro} (new cam).
+
+The flat scans need to be selected from the suggested timestamps in the GUI. Use at least 30 scans. For the old cam, one needs to specify nmax if the scans were aborted. Otherwise the program crashes reading a shorter-than-expected logfile. This option is not shown and unnecessary for the new cam because files are searched with file\_search() and aborted series don't matter. The output is a flat array where equal wavelengths and stokes states are averaged into one image
+
+\subsection{calc.~blueshift}
+Calls \textit{ibis\_blueshift.pro}.
+
+Procedure: load nb flat and dark, order flat by ascending wl, average all images of same wl and pol state. Updated flat is saved, old flat is now called .backup. The user manually selects a wl range to use for blueshift calculation (once per wl) to avoid double lines as in 6301/6302. Calls \textit{ibis\_blueshift\_map.pro} to get the actual blueshift.
+
+Blueshift calculation:\\
+- Wavelength scale is interpolated to 10 m\AA\ grid. Data are interpolated (quadratic) on this scale. Left and right beam are treated separately.\\
+ - Find line center for each pixel (COG, poly\_fit)\\
+-  surface fit for this map, (average all fits for each pol. state -> one map per filter)\\
+
+ 
+Loops through wavelengths chosen in 'variables'. If a blueshift for a certain wavelength already exists, the program asks if it should be overwritten.
+
+The maps can be viewed with the button on the right that calls \textit{view\_blueshift.pro}. 
+
+\subsection{nb gain table}
+Choose which blueshift file should be used: poly\_fit (=polynomial fit) or COG (center-of-gravity). COG seems to be more stable if the camera has fringes or if the line is as broad as 6563.
+
+Calls \textit{ibis\_gain.pro}
+
+Procedure:\\
+ - interpolate wl of each pixel in flat to common 10 m\AA\ scale -> average FOV -> get one flat profile\\
+ - make shifted map of this average profile\\
+-  difference between left and right beam (cfactor)\\
+-  flat without spectral lines: measured flats / (shifted avg profile map)
+
+
+\subsection{prepare speckle}
+\label{prepspeckle}
+Calls \textit{ibis\_reduce\_speckle.pro} or \textit{ibis\_reduce\_speckle\_ncam.pro} 
+
+For the old camera, a burst size can be specified and this size is used to create speckle bursts from all WL images. They are later correlated by observing time. For the post 2010 camera, there currently is one speckle file per ibis file. The burst size is given by the number of extensions with same filter. I.e.~ if one observes 20 wavelengths of 6302 (polarimetry) and 15 wavelength of 6563 (Stokes $I$ only), then the burst size for 6302 will be 20*6 and for 6563 only 15, which is too low for a good speckle. The ideal size is around 70 files / burst.
+
+So far, there is no way to save multiple files of same timestamp or to combine different files for a larger burst size. Also the program will probably crash if anybody used the repeat option (R>1) while observing. This would be a major change, because it makes finding the correct reconstruction for an observation much harder.
+
+The program creates all ibis\_wl\_* files, which are in binary little-endian format. They only contain the actual image, whose size will be smaller than the 1000x1000 chip size.
+
+Creates speckle\_dims.txt and speckle\_sid.sav which contains speckle\_db.
+
+The parameters for speckle are saved in speckle\_dims.txt. Look for the pixel size of the image, and the images per burst for each wavelength in the lower part of that file. speckle\_db is necessary for destretch speckle.
+
+todo: create input files for speckle automatically.
+
+Speckle needs to be run manually! If you don't do speckle, you can omit sections \ref{prepspeckle} - \ref{destrsp} and continue with combine and choose 'avg' or 'seq' for alignment later.
+
+\subsection{speckle to idl}
+\label{stoi}
+Calls \textit{ibis\_prepare\_speckle.pro}.
+
+Converts speckle binary files (*.final) to IDL save files (*.sav). Their original size (usually 1000x1000) is restored.
+
+\subsection{destretch speckle}
+\label{destrsp}
+
+Calls \textit{ibis\_detr\_speckle.pro} (own program).
+
+This program destretches all speckle images. First, it finds all *.sav images, then it orders them by time using info from speckle\_db. When the timestamp changes, the program checks by cross-correlation if the same target was still observed and if yes, the destretch continues. Otherwise it starts a new destretch round with the first image of the series being the reference. The reference image keeps changing throughout the series to take solar evolution into account. The program overwrites all *.sav files to save space. The original *.sav files can be recreated fast with 'speckle to idl'.
+
+The program only works with post-2010 cam data. The older data that I have already looked good without it.
+
+A hard-wired kernel of  ds\_kernel = [0,64,32] is used. It is probably not perfect, especially for data with bad seeing, but adding another level would be much slower.
+
+\subsection{combine all}
+Calls \textit{ibis\_combine\_lk.pro} or \textit{ibis\_combine\_ncam.pro} 
+Calls \textit{assign\_speckle2nb.pro} or \textit{assign\_speckle2nb\_ncam.pro}.
+
+\subsection{reduce IBIS}
+Calls \textit{ibis\_calibrate.pro}
+
+
+\subsection{find polcal}
+Calls \textit{collect\_ibis\_polcal.pro}
+
+Creates subdirectories polcal\_xx.
+\subsection{do polcal}
+
+ibis\_create\_polcalcurve
+
+User must choose region for polcal.
+
+ibis\_generate\_polcalfile, pfile, sfile, outfilename
+
+run,pcfile,tfile,fout1,fout2,/Linux,pathtolib=pathtolib
+  	
+xmatrix\_inputs, lambda, fout1,fout2,/linux  ;okay, Tmatrix.idl is a symbolic link to correct matrix
+    
+choose quiet sun, choose continuum
+
+main\_ibis\_calibrate
+\section{Versions and changes}
+
+\section{Bibliography}
+
+
+\end{document}

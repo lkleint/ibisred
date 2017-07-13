@@ -1,0 +1,27 @@
+\contentsline {section}{\numberline {1}Introduction}{3}{section.1}
+\contentsline {subsection}{\numberline {1.1}General}{3}{subsection.1.1}
+\contentsline {subsection}{\numberline {1.2}Requirements}{4}{subsection.1.2}
+\contentsline {subsection}{\numberline {1.3}ToDo and known problems}{4}{subsection.1.3}
+\contentsline {section}{\numberline {2}The GUI}{5}{section.2}
+\contentsline {subsection}{\numberline {2.1}Variables}{5}{subsection.2.1}
+\contentsline {subsection}{\numberline {2.2}observing mode choices}{7}{subsection.2.2}
+\contentsline {subsection}{\numberline {2.3}wl database -> now obsolete}{8}{subsection.2.3}
+\contentsline {subsection}{\numberline {2.4}wl dark and flat}{8}{subsection.2.4}
+\contentsline {subsection}{\numberline {2.5}NB and WL align}{8}{subsection.2.5}
+\contentsline {subsection}{\numberline {2.6}nb dark and flat}{10}{subsection.2.6}
+\contentsline {subsection}{\numberline {2.7}calc.\nobreakspace {}blueshift}{10}{subsection.2.7}
+\contentsline {subsection}{\numberline {2.8}nb gain table}{11}{subsection.2.8}
+\contentsline {subsection}{\numberline {2.9}prepare speckle}{12}{subsection.2.9}
+\contentsline {subsection}{\numberline {2.10}Open speckle GUI}{12}{subsection.2.10}
+\contentsline {subsection}{\numberline {2.11}speckle to idl}{13}{subsection.2.11}
+\contentsline {subsection}{\numberline {2.12}destretch speckle}{13}{subsection.2.12}
+\contentsline {subsection}{\numberline {2.13}reduce spec scan}{13}{subsection.2.13}
+\contentsline {subsection}{\numberline {2.14}calc prefilter}{13}{subsection.2.14}
+\contentsline {subsection}{\numberline {2.15}prefilter -> flat}{14}{subsection.2.15}
+\contentsline {subsection}{\numberline {2.16}combine all}{14}{subsection.2.16}
+\contentsline {subsection}{\numberline {2.17}shift NB on WL}{15}{subsection.2.17}
+\contentsline {subsection}{\numberline {2.18}reduce IBIS}{15}{subsection.2.18}
+\contentsline {subsection}{\numberline {2.19}find polcal}{16}{subsection.2.19}
+\contentsline {subsection}{\numberline {2.20}do polcal}{16}{subsection.2.20}
+\contentsline {section}{\numberline {3}Versions and changes}{18}{section.3}
+\contentsline {section}{\numberline {4}Bibliography}{20}{section.4}
