@@ -59,6 +59,8 @@ pro ftsread,data,wl,nblocks,xlam=xlam
 ;       ps (USG)   1996-05-22: Adapt for USG, take out host code
 ;       ps (USG)   1996-08-01: Use ASSOC to read data to allow use on
 ;                              non-Unix machines
+;        LK        2017-08-01: modified hardwired atlas path acc.
+;                              to Kevin's suggestion
 ;---
 
 on_error,2
@@ -73,8 +75,9 @@ sdir=getenv('SPECTRAL_DATA')
  ;;; set the full path name of FTS-atla file::
 if sdir eq '' then $
 ;  sdir = '/usr/local/idl/data'
-sdir = '/Users/kleintl/idl/'
-
+;sdir = '/Users/kleintl/idl/'
+;mod from Kevin
+  sdir = File_Dirname(Routine_Filepath(/Either),/Mark_Directory) 
 if n_params() lt 1 then $
    message,'usage: FTSREAD,data [,lambda_start,{lambda_end | nblocks}] [,XLAM=xlam] [,/PLOT]'
 

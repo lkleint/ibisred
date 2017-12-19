@@ -449,6 +449,9 @@ if (size(info_flat_short))[0] eq 2 then info_flat_short = reform(info_flat_short
               blsr[*, *, i, 1] = shift_bicub(blds[*, *, i, 1], shft_tot[0, 0, 0, i], shft_tot[1, 0, 0, i])
            ENDFOR
 
+           ;;### check why dimension 2 and Npol*Nwave seem to be switched
+           ;;Is shift applied per wavelength?
+           stop
 
         ENDIF ELSE BEGIN  ;usual case:
 
@@ -471,10 +474,18 @@ if (size(info_flat_short))[0] eq 2 then info_flat_short = reform(info_flat_short
               blsl[xl:xr, yb:yt, i] = doreg(blsl[xl:xr, yb:yt, i], grid, shft_tot[*, *, *, i])
               blsr[xl:xr, yb:yt, i] = doreg(blsr[xl:xr, yb:yt, i], grid, shft_tot[*, *, *, i])
            ENDFOR
-
+           ;;each wavelength has a different shift. Variation is small (0.3 mA).
+           ;;the reason for this is that seeing changes each frame (wavelength). After destretching,
+           ;;one pixel (line profile) is therefore composed of different places/pixels in the FOV,
+           ;;which have different blueshifts. So one needs to destretch the blueshift map too.
+           ;;The wl interpolation due to blueshift can only be done on the destretched data, otherwise
+           ;;one would combine wavelengths of different positions on the sun.
+           ;;If the spatial shift due to seeing was 15 pixels, that would lead to a ~3 mA shift of
+           ;;the blueshift at the edge of the fov and <1 mA near the center. So the destretch of the
+           ;;blueshift probably would not even be necessary.
+           
          ENDELSE ;ds_kernel
         ENDIF ;--DSTR_IDL
-
   
         ;;#################################################################
         ;; Perform blueshift correction
@@ -496,8 +507,14 @@ if rr eq 1 then begin
         FOR j = 0, Nrow-1 DO BEGIN
            FOR i = 0, Ncol-1 DO BEGIN
               FOR k = 0, Npol-1 DO BEGIN
+                 ;;left beam. index_wl sorts by ascending wavelength.
+                 ;;wscale is the absolute wavelength scale in A (ascending)
+                 ;;This step interpolates the line profile onto a new wavelength scale.
+                 ;;Points near the edges of the FOV are interpolated on a wl scale with x_new>x
+                 ;;
                  nbdwc[i, j, k, *, 0] = REFORM(INTERPOL(REFORM(nbsl[i, j, k, index_wl]), wscale, $
                                                         wscale + REFORM(blsl[i, j, k, index_wl])))
+                 ;right beam
                  nbdwc[i, j, k, *, 1] = REFORM(INTERPOL(REFORM(nbsr[i, j, k, index_wl]), wscale, $
                                                         wscale + REFORM(blsr[i, j, k, index_wl])))
               ENDFOR

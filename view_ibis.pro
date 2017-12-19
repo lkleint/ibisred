@@ -122,47 +122,50 @@ if not keyword_set(vv) then tvscl, stokes[*, *, imgind] else tvscl, stokes[*, *,
      tvscl,tempimg,0.01,0.1,xsize=sizex,/norm,true=3
 
      plot, lambda, stokes[i,j,*,0], $
-       XTITLE=xtitle, YTITLE=ytitlei, /YS,position=[0.32,0.58,0.6,0.95],/norm ,/xs,/noer,psym=-4 ;YRANGE=[dmin, dmax], 
+           XTITLE=xtitle, YTITLE=ytitlei, /YS,position=[0.32,0.58,0.6,0.95],/norm ,/xs,/noer,psym=-4,$
+           charthick=2,xthick=2,ythick=2,thick=2
       if keyword_set(xl) then xline,xl,lines=1
 
     ;plot Q/I
       if not keyword_set(equal) then begin 
-        plot, lambda, stokes[i,j,*,1], XTITLE=xtitle, YTITLE=ytitleq, /YSTYLE,$
-        position=[0.7,0.58,0.98,0.95],/norm,/noer  ,/xs
+        plot, lambda, stokes[i,j,*,1], XTITLE=xtitle, YTITLE=ytitleq, /YSTYLE,charthick=2,$
+        position=[0.7,0.58,0.98,0.95],/norm,/noer,/xs,xthick=2,ythick=2,thick=2
        endif else begin
         xm = max(abs(stokes[i,j,*,1])) & yr = [-xm-0.05*xm,xm+0.05*xm]
-        plot, lambda, stokes[i,j,*,1], XTITLE=xtitle, YTITLE=ytitleq, /YSTYLE,$
-        position=[0.7,0.58,0.98,0.95],/norm,/noer,yrange=yr ,/xs
+        plot, lambda, stokes[i,j,*,1], XTITLE=xtitle, YTITLE=ytitleq, /YSTYLE,charthick=2,$
+        position=[0.7,0.58,0.98,0.95],/norm,/noer,yrange=yr,/xs,xthick=2,ythick=2,thick=2
        endelse
       yline,0,lines=1  
       if keyword_set(xl) then xline,xl,lines=1
 
      ;plot U/I
        if not keyword_set(equal) then begin 
-        plot, lambda, stokes[i,j,*,2], XTITLE=xtitle, YTITLE=ytitleu, /YSTYLE,$
-        position=[0.32,0.1,0.6,0.47],/norm,/noer ,/xs
+        plot, lambda, stokes[i,j,*,2], XTITLE=xtitle, YTITLE=ytitleu, /YSTYLE,charthick=2,$
+        position=[0.32,0.1,0.6,0.47],/norm,/noer,/xs,xthick=2,ythick=2,thick=2
        endif else begin
         xm = max(abs(stokes[i,j,*,2])) & yr = [-xm-0.05*xm,xm+0.05*xm]
-        plot, lambda, stokes[i,j,*,2], XTITLE=xtitle, YTITLE=ytitleu, /YSTYLE,$
-        position=[0.32,0.1,0.6,0.47],/norm,/noer,yrange=yr ,/xs
+        plot, lambda, stokes[i,j,*,2], XTITLE=xtitle, YTITLE=ytitleu, /YSTYLE,charthick=2,$
+        position=[0.32,0.1,0.6,0.47],/norm,/noer,yrange=yr,/xs,xthick=2,ythick=2,thick=2
        endelse
       yline,0,lines=1  
       if keyword_set(xl) then xline,xl,lines=1
 
       ;plot V/I
        if not keyword_set(equal) then begin 
-        plot, lambda, stokes[i,j,*,3], XTITLE=xtitle, YTITLE=ytitlev, /YSTYLE,$
-        position=[0.7,0.1,0.98,0.47],/norm,/noer  ,/xs
+        plot, lambda, stokes[i,j,*,3], XTITLE=xtitle, YTITLE=ytitlev, /YSTYLE,charthick=2,$
+        position=[0.7,0.1,0.98,0.47],/norm,/noer,/xs,xthick=2,ythick=2,thick=2
        endif else begin
         xm = max(abs(stokes[i,j,*,3])) & yr = [-xm-0.05*xm,xm+0.05*xm]
-        plot, lambda, stokes[i,j,*,3], XTITLE=xtitle, YTITLE=ytitlev, /YSTYLE,$
-        position=[0.7,0.1,0.98,0.47],/norm,/noer,yrange=yr ,/xs
+        plot, lambda, stokes[i,j,*,3], XTITLE=xtitle, YTITLE=ytitlev, /YSTYLE,charthick=2,$
+        position=[0.7,0.1,0.98,0.47],/norm,/noer,yrange=yr,/xs,xthick=2,ythick=2,thick=2
        endelse
       yline,0,lines=1  
       if keyword_set(xl) then xline,xl,lines=1
   
      !p.charsize=1.
-   
+      xyouts, 0.05, 0.01, "[" + string(i, FORMAT='(I3)') + ", " + $
+        string(j MOD Ny, FORMAT='(I3)') + "]", /NORMAL,charthick=2
+
      device,/close
      set_plot,'x'      
     ENDIF
