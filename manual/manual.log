@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.14159265-2.6-1.40.16 (TeX Live 2015) (preloaded format=pdflatex 2017.3.11)  15 APR 2017 16:14
+This is pdfTeX, Version 3.14159265-2.6-1.40.16 (TeX Live 2015) (preloaded format=pdflatex 2017.3.11)  9 AUG 2017 00:02
 entering extended mode
  \write18 enabled.
  file:line:error style messages enabled.
@@ -9,8 +9,8 @@ LaTeX2e <2015/01/01>
 Babel <3.9l> and hyphenation patterns for 79 languages loaded.
 (/usr/local/texlive/2015/texmf-dist/tex/latex/base/article.cls
 Document Class: article 2014/09/29 v1.4h Standard LaTeX document class
-(/usr/local/texlive/2015/texmf-dist/tex/latex/base/size12.clo
-File: size12.clo 2014/09/29 v1.4h Standard LaTeX file (size option)
+(/usr/local/texlive/2015/texmf-dist/tex/latex/base/size11.clo
+File: size11.clo 2014/09/29 v1.4h Standard LaTeX file (size option)
 )
 \c@part=\count79
 \c@section=\count80
@@ -251,23 +251,29 @@ Package uniquecounter Info: New unique counter `rerunfilecheck' on input line 2
 )
 \Hy@SectionHShift=\skip52
 )
-(./manual.aux)
+(./natbib.sty
+Package: natbib 2006/03/22 7.3 (PWD)
+\bibhang=\skip53
+\bibsep=\skip54
+LaTeX Info: Redefining \cite on input line 541.
+\c@NAT@ctr=\count101
+) (./aastexcommands.tex) (./manual.aux)
 \openout1 = `manual.aux'.
 
-LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 30.
-LaTeX Font Info:    ... okay on input line 30.
-LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 30.
-LaTeX Font Info:    ... okay on input line 30.
-LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 30.
-LaTeX Font Info:    ... okay on input line 30.
-LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 30.
-LaTeX Font Info:    ... okay on input line 30.
-LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 30.
-LaTeX Font Info:    ... okay on input line 30.
-LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 30.
-LaTeX Font Info:    ... okay on input line 30.
-LaTeX Font Info:    Checking defaults for PD1/pdf/m/n on input line 30.
-LaTeX Font Info:    ... okay on input line 30.
+LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 29.
+LaTeX Font Info:    ... okay on input line 29.
+LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 29.
+LaTeX Font Info:    ... okay on input line 29.
+LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 29.
+LaTeX Font Info:    ... okay on input line 29.
+LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 29.
+LaTeX Font Info:    ... okay on input line 29.
+LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 29.
+LaTeX Font Info:    ... okay on input line 29.
+LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 29.
+LaTeX Font Info:    ... okay on input line 29.
+LaTeX Font Info:    Checking defaults for PD1/pdf/m/n on input line 29.
+LaTeX Font Info:    ... okay on input line 29.
 
 *geometry* driver: auto-detecting
 *geometry* detected driver: pdftex
@@ -277,23 +283,23 @@ LaTeX Font Info:    ... okay on input line 30.
 * layout: <same size as paper>
 * layoutoffset:(h,v)=(0.0pt,0.0pt)
 * modes: 
-* h-part:(L,W,R)=(89.62709pt, 418.25368pt, 89.6271pt)
+* h-part:(L,W,R)=(56.9055pt, 483.69687pt, 56.9055pt)
 * v-part:(T,H,B)=(56.9055pt, 686.7347pt, 101.40665pt)
 * \paperwidth=597.50787pt
 * \paperheight=845.04684pt
-* \textwidth=418.25368pt
+* \textwidth=483.69687pt
 * \textheight=686.7347pt
-* \oddsidemargin=17.3571pt
-* \evensidemargin=17.3571pt
+* \oddsidemargin=-15.36449pt
+* \evensidemargin=-15.36449pt
 * \topmargin=-52.36449pt
 * \headheight=12.0pt
 * \headsep=25.0pt
-* \topskip=12.0pt
+* \topskip=11.0pt
 * \footskip=30.0pt
 * \marginparwidth=54.2025pt
 * \marginparsep=10.0pt
 * \columnsep=10.0pt
-* \skip\footins=10.8pt plus 4.0pt minus 2.0pt
+* \skip\footins=10.0pt plus 4.0pt minus 2.0pt
 * \hoffset=0.0pt
 * \voffset=0.0pt
 * \mag=1000
@@ -305,16 +311,16 @@ LaTeX Font Info:    ... okay on input line 30.
 
 (/usr/local/texlive/2015/texmf-dist/tex/context/base/supp-pdf.mkii
 [Loading MPS to PDF converter (version 2006.09.02).]
-\scratchcounter=\count101
+\scratchcounter=\count102
 \scratchdimen=\dimen117
 \scratchbox=\box26
-\nofMPsegments=\count102
-\nofMParguments=\count103
+\nofMPsegments=\count103
+\nofMParguments=\count104
 \everyMPshowfont=\toks19
-\MPscratchCnt=\count104
+\MPscratchCnt=\count105
 \MPscratchDim=\dimen118
-\MPnumerator=\count105
-\makeMPintoPDFobject=\count106
+\MPnumerator=\count106
+\makeMPintoPDFobject=\count107
 \everyMPtoPDFconversion=\toks20
 ) (/usr/local/texlive/2015/texmf-dist/tex/latex/oberdiek/epstopdf-base.sty
 Package: epstopdf-base 2010/02/09 v2.5 Base part for package epstopdf
@@ -332,7 +338,7 @@ File: epstopdf-sys.cfg 2010/07/13 v1.3 Configuration of (r)epstopdf for TeX Liv
 e
 ))
 \AtBeginShipoutBox=\box27
-Package hyperref Info: Link coloring ON on input line 30.
+Package hyperref Info: Link coloring ON on input line 29.
 
 (/usr/local/texlive/2015/texmf-dist/tex/latex/hyperref/nameref.sty
 Package: nameref 2012/10/27 v2.43 Cross-referencing by name of section
@@ -340,22 +346,22 @@ Package: nameref 2012/10/27 v2.43 Cross-referencing by name of section
 (/usr/local/texlive/2015/texmf-dist/tex/generic/oberdiek/gettitlestring.sty
 Package: gettitlestring 2010/12/03 v1.4 Cleanup title references (HO)
 )
-\c@section@level=\count107
+\c@section@level=\count108
 )
-LaTeX Info: Redefining \ref on input line 30.
-LaTeX Info: Redefining \pageref on input line 30.
-LaTeX Info: Redefining \nameref on input line 30.
+LaTeX Info: Redefining \ref on input line 29.
+LaTeX Info: Redefining \pageref on input line 29.
+LaTeX Info: Redefining \nameref on input line 29.
 
 (./manual.out) (./manual.out)
 \@outlinefile=\write3
 \openout3 = `manual.out'.
 
-LaTeX Font Info:    Try loading font information for U+msa on input line 43.
+LaTeX Font Info:    Try loading font information for U+msa on input line 42.
 
 (/usr/local/texlive/2015/texmf-dist/tex/latex/amsfonts/umsa.fd
 File: umsa.fd 2013/01/14 v3.01 AMS symbols A
 )
-LaTeX Font Info:    Try loading font information for U+msb on input line 43.
+LaTeX Font Info:    Try loading font information for U+msb on input line 42.
 
 (/usr/local/texlive/2015/texmf-dist/tex/latex/amsfonts/umsb.fd
 File: umsb.fd 2013/01/14 v3.01 AMS symbols B
@@ -368,136 +374,173 @@ al.toc)
 
 
 [2]
-Overfull \hbox (36.70746pt too wide) in paragraph at lines 53--54
-\T1/cmr/m/n/12 The IBIS data re-duc-tion can be done (more or less) au-to-mat-i
--cally us-ing ibis_gui_new.pro.
+LaTeX Font Info:    Try loading font information for T1+cmtt on input line 52.
+ (/usr/local/texlive/2015/texmf-dist/tex/latex/base/t1cmtt.fd
+File: t1cmtt.fd 2014/09/29 v2.5h Standard LaTeX font definitions
+) [3] [4]
+<ibis.jpg, id=193, 331.2375pt x 539.01375pt>
+File: ibis.jpg Graphic file (type jpg)
+ <use ibis.jpg>
+Package pdftex.def Info: ibis.jpg used on input line 131.
+(pdftex.def)             Requested size: 266.03474pt x 432.93053pt.
+LaTeX Font Info:    Try loading font information for T1+cmss on input line 136.
+
+
+(/usr/local/texlive/2015/texmf-dist/tex/latex/base/t1cmss.fd
+File: t1cmss.fd 2014/09/29 v2.5h Standard LaTeX font definitions
+)
+Overfull \hbox (1.35118pt too wide) in paragraph at lines 142--142
+[]\T1/cmss/m/n/10.95 M,m:| 
  []
 
-[3]
-Overfull \hbox (14.25803pt too wide) in paragraph at lines 110--121
-\T1/cmr/m/n/12 astrolib (for find_all_dir etc.) (down-loaded from: http://idlas
-tro.gsfc.nasa.gov/ftp/) 
+
+Overfull \hbox (2.00018pt too wide) in paragraph at lines 144--144
+[]\T1/cmss/m/n/10.95 CCD:| 
  []
 
-LaTeX Font Info:    Try loading font information for OMS+cmr on input line 125.
+
+Overfull \hbox (7.34216pt too wide) in paragraph at lines 147--147
+[]\T1/cmss/m/n/10.95 LCVR:| 
+ []
+
+
+Overfull \hbox (4.33873pt too wide) in paragraph at lines 151--151
+[]\T1/cmss/m/n/10.95 FWH:| 
+ []
+
+
+Overfull \hbox (0.96703pt too wide) in paragraph at lines 153--153
+[]\T1/cmss/m/n/10.95 BST:| 
+ []
+
+
+Overfull \hbox (4.07611pt too wide) in paragraph at lines 158--158
+[]\T1/cmss/m/n/10.95 PMT:| 
+ []
+
+
+Overfull \hbox (2.4216pt too wide) in paragraph at lines 128--163
+[][]  [] 
+ []
+
+[5 <./ibis.jpg>] [6] [7]
+LaTeX Font Info:    Try loading font information for OMS+cmr on input line 200.
+
 
 (/usr/local/texlive/2015/texmf-dist/tex/latex/base/omscmr.fd
 File: omscmr.fd 2014/09/29 v2.5h Standard LaTeX font definitions
 )
-LaTeX Font Info:    Font shape `OMS/cmr/m/n' in size <12> not available
-(Font)              Font shape `OMS/cmsy/m/n' tried instead on input line 125.
-
-Overfull \hbox (6.26868pt too wide) in paragraph at lines 132--133
-[]\T1/cmr/m/n/12 ibis_combine_lk: key-words scan_no=5, Nmax=30, /ATM, /day-drif
-t, /movie
- []
-
-[4] <ibis2.png, id=172, 828.09375pt x 1008.76875pt>
+LaTeX Font Info:    Font shape `OMS/cmr/m/n' in size <10.95> not available
+(Font)              Font shape `OMS/cmsy/m/n' tried instead on input line 200.
+ [8] [9] [10]
+<ibis2.png, id=243, 828.09375pt x 1008.76875pt>
 File: ibis2.png Graphic file (type png)
  <use ibis2.png>
-Package pdftex.def Info: ibis2.png used on input line 157.
-(pdftex.def)             Requested size: 418.25368pt x 509.52425pt.
+Package pdftex.def Info: ibis2.png used on input line 245.
+(pdftex.def)             Requested size: 386.95897pt x 471.3969pt.
 
-<ibis3.png, id=173, 815.045pt x 172.645pt>
+<ibis3.png, id=244, 815.045pt x 172.645pt>
 File: ibis3.png Graphic file (type png)
  <use ibis3.png>
-Package pdftex.def Info: ibis3.png used on input line 158.
-(pdftex.def)             Requested size: 418.25368pt x 88.59572pt.
+Package pdftex.def Info: ibis3.png used on input line 246.
+(pdftex.def)             Requested size: 386.95897pt x 81.9677pt.
 
-<ibis1.png, id=174, 847.165pt x 301.125pt>
+Underfull \hbox (badness 10000) in paragraph at lines 245--247
+[][]
+ []
+
+<ibis1.png, id=245, 847.165pt x 301.125pt>
 File: ibis1.png Graphic file (type png)
  <use ibis1.png>
-Package pdftex.def Info: ibis1.png used on input line 166.
-(pdftex.def)             Requested size: 418.25368pt x 148.66907pt.
- [5] [6 <./ibis2.png> <./ibis3.png>] [7 <./ibis1.png>]
-<ibiswldark.png, id=192, 740.7675pt x 752.8125pt>
+Package pdftex.def Info: ibis1.png used on input line 254.
+(pdftex.def)             Requested size: 483.69687pt x 171.9279pt.
+ [11 <./ibis2.png> <./ibis3.png>] [12 <./ibis1.png>]
+<ibiswldark.png, id=258, 740.7675pt x 752.8125pt>
 File: ibiswldark.png Graphic file (type png)
  <use ibiswldark.png>
-Package pdftex.def Info: ibiswldark.png used on input line 220.
-(pdftex.def)             Requested size: 188.21288pt x 191.26968pt.
+Package pdftex.def Info: ibiswldark.png used on input line 307.
+(pdftex.def)             Requested size: 217.66211pt x 221.19325pt.
 
-<ibiswlflat.png, id=193, 742.775pt x 753.81625pt>
+<ibiswlflat.png, id=259, 742.775pt x 753.81625pt>
 File: ibiswlflat.png Graphic file (type png)
  <use ibiswlflat.png>
-Package pdftex.def Info: ibiswlflat.png used on input line 221.
-(pdftex.def)             Requested size: 188.21288pt x 191.00711pt.
- [8]
-Overfull \hbox (131.309pt too wide) in paragraph at lines 237--244
-\T1/cmr/m/n/12 http://www.exelisvis.com/Support/HelpArticlesDetail/TabId/219/Ar
-tMID/900/ArticleID/3947/3947.aspx
+Package pdftex.def Info: ibiswlflat.png used on input line 308.
+(pdftex.def)             Requested size: 217.66211pt x 220.89008pt.
+ [13 <./ibiswldark.png> <./ibiswlflat.png>]
+Overfull \hbox (25.68907pt too wide) in paragraph at lines 324--331
+\T1/cmr/m/n/10.95 http://www.exelisvis.com/Support/HelpArticlesDetail/TabId/219
+/ArtMID/900/ArticleID/3947/3947.aspx
  []
 
-[9 <./ibiswldark.png> <./ibiswlflat.png>]
-Underfull \hbox (badness 10000) in paragraph at lines 293--297
-
- []
-
-[10] <ibisblueshift.png, id=208, 1028.84375pt x 516.93124pt>
+[14] <ibisblueshift.png, id=271, 1028.84375pt x 516.93124pt>
 File: ibisblueshift.png Graphic file (type png)
 
 <use ibisblueshift.png>
-Package pdftex.def Info: ibisblueshift.png used on input line 300.
-(pdftex.def)             Requested size: 376.42575pt x 189.13187pt.
- [11 <./ibisblueshift.png>] [12]
-Overfull \hbox (5.81781pt too wide) in paragraph at lines 383--384
-[]\T1/cmr/m/n/12 The av-er-age pro-file and a rel-a-tive wave-length scale are 
-saved in cal-i-bra-tion/ imgspec-
- []
+Package pdftex.def Info: ibisblueshift.png used on input line 388.
+(pdftex.def)             Requested size: 435.32422pt x 218.72662pt.
 
-[13] [14]
-Overfull \hbox (0.55328pt too wide) in paragraph at lines 440--443
-\T1/cmr/m/n/12 files in the cho-sen di-rec-to-ries. The re-sults are saved in t
-he timestamp-subdirectories
- []
+<ibis_blueshift_scheme.jpg, id=272, 1304.875pt x 634.37pt>
+File: ibis_blueshift_scheme.jpg Graphic file (type jpg)
 
-[15]
-LaTeX Font Info:    Try loading font information for T1+cmtt on input line 463.
-
- (/usr/local/texlive/2015/texmf-dist/tex/latex/base/t1cmtt.fd
-File: t1cmtt.fd 2014/09/29 v2.5h Standard LaTeX font definitions
-) [16]
-Overfull \hbox (2.61047pt too wide) in paragraph at lines 480--499
+<use ibis_blueshift_scheme.jpg>
+Package pdftex.def Info: ibis_blueshift_scheme.jpg used on input line 395.
+(pdftex.def)             Requested size: 435.32422pt x 211.63683pt.
+ [15] [16 <./ibisblueshift.png> <./ibis_blueshift_scheme.jpg>] [17] [18] [19] [
+20]
+Overfull \hbox (2.4216pt too wide) in paragraph at lines 576--595
 []$[]$ $[]$ 
  []
 
-[17] [18] [19]
-Package atveryend Info: Empty hook `BeforeClearDocument' on input line 577.
- [20]
-Package atveryend Info: Empty hook `AfterLastShipout' on input line 577.
+[21] [22] [23] (./manual.bbl
+
+LaTeX Warning: Reference `@' on page 24 undefined on input line 5.
+
+)
+Package atveryend Info: Empty hook `BeforeClearDocument' on input line 704.
+ [24]
+Package atveryend Info: Empty hook `AfterLastShipout' on input line 704.
  (./manual.aux)
-Package atveryend Info: Executing hook `AtVeryEndDocument' on input line 577.
-Package atveryend Info: Executing hook `AtEndAfterFileList' on input line 577.
+Package atveryend Info: Executing hook `AtVeryEndDocument' on input line 704.
+Package atveryend Info: Executing hook `AtEndAfterFileList' on input line 704.
 Package rerunfilecheck Info: File `manual.out' has not changed.
-(rerunfilecheck)             Checksum: 5AFCD3D76E3700931064D52C361308F1;1840.
-Package atveryend Info: Empty hook `AtVeryVeryEnd' on input line 577.
+(rerunfilecheck)             Checksum: BD05550F847D79D153685DEEA658832F;2186.
+
+
+LaTeX Warning: There were undefined references.
+
+Package atveryend Info: Empty hook `AtVeryVeryEnd' on input line 704.
  ) 
 Here is how much of TeX's memory you used:
- 6397 strings out of 493089
- 93159 string characters out of 6134842
- 180834 words of memory out of 5000000
- 9732 multiletter control sequences out of 15000+600000
- 17281 words of font info for 52 fonts, out of 8000000 for 9000
+ 6784 strings out of 493089
+ 97386 string characters out of 6134842
+ 188044 words of memory out of 5000000
+ 10073 multiletter control sequences out of 15000+600000
+ 21497 words of font info for 60 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
- 29i,8n,43p,1027b,376s stack positions out of 5000i,500n,10000p,200000b,80000s
+ 29i,12n,43p,1549b,438s stack positions out of 5000i,500n,10000p,200000b,80000s
 {/usr/local/texlive/2015/texmf-dist/fonts/enc/dvips/cm-super/cm-super-t1.enc}
-</usr/local/texlive/2015/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi12.pfb><
+</usr/local/texlive/2015/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi10.pfb><
 /usr/local/texlive/2015/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi8.pfb></u
-sr/local/texlive/2015/texmf-dist/fonts/type1/public/amsfonts/cm/cmr12.pfb></usr
+sr/local/texlive/2015/texmf-dist/fonts/type1/public/amsfonts/cm/cmr10.pfb></usr
 /local/texlive/2015/texmf-dist/fonts/type1/public/amsfonts/cm/cmr8.pfb></usr/lo
 cal/texlive/2015/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.pfb></usr/loc
 al/texlive/2015/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy8.pfb></usr/local
-/texlive/2015/texmf-dist/fonts/type1/public/cm-super/sfbx1200.pfb></usr/local/t
-exlive/2015/texmf-dist/fonts/type1/public/cm-super/sfbx1440.pfb></usr/local/tex
-live/2015/texmf-dist/fonts/type1/public/cm-super/sfbx1728.pfb></usr/local/texli
-ve/2015/texmf-dist/fonts/type1/public/cm-super/sfrm1200.pfb></usr/local/texlive
-/2015/texmf-dist/fonts/type1/public/cm-super/sfrm1440.pfb></usr/local/texlive/2
-015/texmf-dist/fonts/type1/public/cm-super/sfrm2074.pfb></usr/local/texlive/201
-5/texmf-dist/fonts/type1/public/cm-super/sfti1200.pfb></usr/local/texlive/2015/
-texmf-dist/fonts/type1/public/cm-super/sftt1200.pfb>
-Output written on manual.pdf (20 pages, 966566 bytes).
+/texlive/2015/texmf-dist/fonts/type1/public/cm-super/sfbx1095.pfb></usr/local/t
+exlive/2015/texmf-dist/fonts/type1/public/cm-super/sfbx1200.pfb></usr/local/tex
+live/2015/texmf-dist/fonts/type1/public/cm-super/sfbx1440.pfb></usr/local/texli
+ve/2015/texmf-dist/fonts/type1/public/cm-super/sfrm0600.pfb></usr/local/texlive
+/2015/texmf-dist/fonts/type1/public/cm-super/sfrm0800.pfb></usr/local/texlive/2
+015/texmf-dist/fonts/type1/public/cm-super/sfrm0900.pfb></usr/local/texlive/201
+5/texmf-dist/fonts/type1/public/cm-super/sfrm1095.pfb></usr/local/texlive/2015/
+texmf-dist/fonts/type1/public/cm-super/sfrm1200.pfb></usr/local/texlive/2015/te
+xmf-dist/fonts/type1/public/cm-super/sfrm1728.pfb></usr/local/texlive/2015/texm
+f-dist/fonts/type1/public/cm-super/sfss1095.pfb></usr/local/texlive/2015/texmf-
+dist/fonts/type1/public/cm-super/sfti1095.pfb></usr/local/texlive/2015/texmf-di
+st/fonts/type1/public/cm-super/sftt1095.pfb>
+Output written on manual.pdf (24 pages, 1420137 bytes).
 PDF statistics:
- 322 PDF objects out of 1000 (max. 8388607)
- 277 compressed objects within 3 object streams
- 55 named destinations out of 1000 (max. 500000)
- 255 words of extra memory for PDF output out of 10000 (max. 10000000)
+ 403 PDF objects out of 1000 (max. 8388607)
+ 347 compressed objects within 4 object streams
+ 76 named destinations out of 1000 (max. 500000)
+ 297 words of extra memory for PDF output out of 10000 (max. 10000000)
 

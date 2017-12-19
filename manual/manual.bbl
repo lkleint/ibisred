@@ -1,0 +1,7 @@
+\begin{thebibliography}{1}
+\expandafter\ifx\csname natexlab\endcsname\relax\def\natexlab#1{#1}\fi
+
+\bibitem[{{Cavallini}(2006)}]{cavallini2006}
+{Cavallini}, F. 2006, \solphys, 236, 415
+
+\end{thebibliography}
